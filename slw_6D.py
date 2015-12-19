@@ -13,7 +13,7 @@ from conv_to_galactic import conv_to_galactic
 from gen_nstars import gen_nstars
 from count_nstars import count_nstars
 """
-from slw_routines import angdist, calc_uvw, calc_sigmavel, calc_rho, gen_nstars, conv_to_galactic, count_nstars
+from slw_routines import angdist, calc_uvw, calc_sigmavel, calc_rho, gen_nstars, conv_to_galactic, count_nstars, gen_pm
 from slw_constants import Rsun, Tsun, Zsun, rho0, au2pc, cell_size, max_dist
 
 def SLW_6D(sub1 = None, sub2 = None, RAs1 = None, DECs1 = None, RAs2 = None, DECs2 = None,

@@ -3,7 +3,10 @@
 import numpy as np
 #from astropy import units as u
 #from astropy.coordinates import SkyCoord
-from slw_constants import Rsun, Tsun, Zsun, rho0, au2pc, cell_size, max_dist
+import time, os
+import random
+import scipy.interpolate as interpolate
+from slw_constants import Rsun, Tsun, Zsun, rho0, au2pc, cell_size, max_dist, min_dist
 
 ########################
 
@@ -27,7 +30,7 @@ def angdist(ra_1, dec_1, ra_2, dec_2):
 def calc_uvw(R, theta, Z):
 
     Rdot = 0.
-    Tdot = (226. - 0.013*Z - 1.56e-5*Z**2) / R  # will later  be converted to Tdot(Z) 
+    Tdot = (226. - 0.013*Z - 1.56e-5*Z**2) / R  # will later be converted to Tdot(Z) 
     Zdot = 0.                                   # typical values for the MW in km/s
 
     theta = np.deg2rad(theta)  # convert degrees to radians
@@ -57,21 +60,27 @@ def calc_sigmavel(Z):
 
 def calc_rho(R, Z):
 
-    H_thin    = 260.
-    H_thick   = 900.                   # scale heights in pc
+    #H_thin    = 260.
+    H_thin    = 300.
+    #H_thick   = 900.                   # scale heights in pc
+    H_thick   = 2100.#-700                   # scale heights in pc
     
-    L_thin    = 2500.
-    L_thick   = 3500.                  # scale lengths in pc
+    #L_thin    = 2500.
+    L_thin    = 3100.
+    #L_thick   = 3500.                  # scale lengths in pc
+    L_thick   = 3700.#-*800                  # scale lengths in pc
     
-    f_thick   = 0.09
+    #f_thick   = 0.09
+    f_thick   = 0.04
+    #f_halo    = 0.0025                 # stellar density in the solar neighborhood
     f_halo    = 0.0025                 # stellar density in the solar neighborhood
     
     f_thin    = 1. - f_thick - f_halo
     r_halo    = 2.77                   # halo density gradient
     q         = 0.64                   # halo flattening parameter
 
-    rho_thin  = rho0 * np.exp(-1 * abs(Z-Zsun) / H_thin)  * np.exp(-1 * (R-Rsun) / L_thin)
-    rho_thick = rho0 * np.exp(-1 * abs(Z-Zsun) / H_thick) * np.exp(-1 * (R-Rsun) / L_thick)
+    rho_thin  = rho0 * np.exp(-1. * abs(Z-Zsun) / H_thin)  * np.exp(-1. * (R-Rsun) / L_thin)
+    rho_thick = rho0 * np.exp(-1. * abs(Z-Zsun) / H_thick) * np.exp(-1. * (R-Rsun) / L_thick)
     rho_halo  = rho0 * ( Rsun / np.sqrt( R**2 + ( Z / q )**2) )**r_halo
 
     rho       = f_thin * rho_thin + f_thick * rho_thick + f_halo * rho_halo
@@ -84,11 +93,20 @@ def calc_rho(R, Z):
 def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
 
     n_acc = 0                # number of stars accepted
+    
+    #random.seed()
+    #rand = random.randint(0,4294967295)
 
     while n_acc < num:
+    
+        # Seed the random generator each time
+        rand = int(os.urandom(4).encode('hex'), 16)
+        np.random.seed(rand)
+            
         n_lft = num - n_acc    # no. of needed stars
 
         X  = np.random.rand(n_lft, 1).flatten()*10*sig2 - 5*sig2 # generate random numbers between (-5,5) sigma of a normalized gaussian
+        #X  = random.uniform(-5, 5) # generate random numbers between (-5,5) sigma of a normalized gaussian
         z1 = (X - mu) / sig1
         z2 = (X - mu) / sig2
         G1 = 1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-z1**2 / 2) # thin disk
@@ -114,8 +132,8 @@ def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
 def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, plx=-9999, lsr=True):
 
     
-    #lsr_vel = np.array([-8.5, 13.38, 6.49]) # Coskunoglu et al. 2011
-    #lsr_vel = np.array([-10, 5.25, 7.17]) # Dehnen & Binney 1998
+    #lsr_vel = np.array([-8.5, 13.38, 6.49])  # Coskunoglu et al. 2011
+    #lsr_vel = np.array([-10, 5.25, 7.17])    # Dehnen & Binney 1998
     lsr_vel = np.array([-11.1, 12.24, 7.25]) # Schonrich, Dehnen & Binney 2010
 
     # Check if (numpy) arrays
@@ -208,11 +226,9 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
 ########################
 
 def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num):
-    
-    sigmaa    = calc_sigmavel(Z0)                                                       # calculate the UVW velocity dispersions
-                                                                                        # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
-    rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars 
-                                                                                        # returns frac = [f_thin, f_thick, f_halo]
+
+    sigmaa    = calc_sigmavel(Z0)                                                       # calculate the UVW velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
+    rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
     vel       = np.array(calc_uvw(R0, T0, Z0)) - np.array(calc_uvw(Rsun, Tsun, Zsun))   # convert to cartesian velocities            
                                                                                         # returns [U,V,W]
 
@@ -229,9 +245,24 @@ def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num):
 
 ########################
 
+
+def inverse_transform_sampling(n_samples):
+    data = np.load('Distance_Dist2.npy')
+    n_bins = int(np.sqrt(len(data)))
+    #print 'INVERSE:', data, n_bins
+    hist, bin_edges = np.histogram(data, bins=n_bins, density=True)    
+    cum_values = np.zeros(bin_edges.shape)
+    cum_values[1:] = np.cumsum(hist*np.diff(bin_edges))
+    inv_cdf = interpolate.interp1d(cum_values, bin_edges)
+    r = np.random.rand(n_samples)
+    return inv_cdf(r)
+    
+########################
+
+
 def conv_to_galactic(ra, dec, d):
 
-    r2d = 180/np.pi # radians to degrees
+    r2d = 180. / np.pi # radians to degrees
 
     # Check if (numpy) arrays
     if isinstance(ra, np.ndarray)  == False: ra  = np.array(ra).flatten()
@@ -243,7 +274,7 @@ def conv_to_galactic(ra, dec, d):
     c_icrs = SkyCoord(ra = ra*u.degree, dec = dec*u.degree, frame = 'icrs')  # The SLOW Astropy way
     l, b = c_icrs.galactic.l.radian, c_icrs.galactic.b.radian
     """
-    l, b = euler(ra, dec) #### PROBABLY A BETTER WAY TO DO THIS WITH ASTROPY
+    l, b = euler(ra, dec)
     l, b = np.deg2rad(l), np.deg2rad(b)
     
     r   = np.sqrt( (d * np.cos( b ) )**2 + Rsun * (Rsun - 2 * d * np.cos( b ) * np.cos( l ) ) )
@@ -254,34 +285,48 @@ def conv_to_galactic(ra, dec, d):
 
 ########################
 
-def gen_nstars(ra0, dec0, num):
+def gen_nstars(ra0, dec0, num, cellsize = None):
 
     # ra0, dec0, num - input parameters
     # ra, dec, dist  - output arrays for the generated stars
+    
+    # Get the cell size, or use the default of 30' x 30' 
+    if cellsize == None: cellsize = cell_size
 
     # Check if (numpy) arrays
     if isinstance(ra0, np.ndarray) == False:
-        ra0 = np.array(ra0)
+        ra0  = np.array(ra0)
         dec0 = np.array(dec0)
 
     n_acc = 0                # number of stars accepted
 
     while n_acc < num:
-        n_lft = num - n_acc # no. of needed stars
+    
+        # Seed the random generator each time
+        rand = int(os.urandom(4).encode('hex'), 16)
+        np.random.seed(rand)
+    
+        n_lft     = num - n_acc # no. of needed stars
 
-        ra1       = ra0  + (np.random.rand(n_lft,1).flatten() - 0.5) * cell_size
-        dec1      = dec0 + (np.random.rand(n_lft,1).flatten() - 0.5) * cell_size
-        dist1     = np.random.rand(n_lft,1).flatten() * max_dist
+        ra1       = ra0  + (np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize
+        dec1      = dec0 + (np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize
+        #dist1     = np.random.rand(n_lft,1).flatten() * max_dist
+        #dist1     = np.random.uniform(low=min_dist, high=max_dist, size=(n_lft,1)).flatten()
+        dist1     = inverse_transform_sampling(n_lft)
+        #print 'HERE'
+        #print ra1
+        #print dec1
+        #print dist1
 
         R, T, Z   = conv_to_galactic(ra1, dec1, dist1)
 
         rho, frac = calc_rho(R,Z)
 
-        rand1 = np.random.rand(n_lft,1).flatten()
+        rand1     = np.random.rand(n_lft,1 ).flatten()
 
         # accept if random number is less than rho(R,Z)/rho0
-        ind = np.where(rand1 < rho / rho0)
-        count = len(ind[0])
+        ind       = np.where(rand1 < rho / rho0)
+        count     = len(ind[0])
 
         if count != 0:
             if n_acc == 0:
@@ -289,8 +334,8 @@ def gen_nstars(ra0, dec0, num):
                 dec  = dec1[ind]
                 dist = dist1[ind]
             else:
-                ra = np.append(ra, ra1[ind].flatten())
-                dec = np.append(dec, dec1[ind].flatten())
+                ra   = np.append(ra, ra1[ind].flatten())
+                dec  = np.append(dec, dec1[ind].flatten())
                 dist = np.append(dist, dist1[ind].flatten())
             n_acc += count
 
@@ -298,30 +343,40 @@ def gen_nstars(ra0, dec0, num):
 
 ########################
 
-def count_nstars(ra, dec):
+def count_nstars(ra, dec, cellsize = None):
     
-    ddist  = 5                                      # steps in distance in pc
-    n      = max_dist / ddist + 1                   # number of steps to take
-    dist   = np.arange(n, dtype=np.float) * ddist   # 0 < d < 2500 in 5 pc steps
+    ddist   = 5.                                      # steps in distance in pc
+    #n       = max_dist / ddist + 1.                   # number of steps to take
+    #dist    = np.arange(n, dtype=np.float) * ddist   # 0 < d < 2500 in 5 pc steps
+    dist    = np.arange(min_dist, max_dist + ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
+    n = len(dist)                                     # number of steps to take
+    deg2rad = np.pi / 180.                            # Convert degrees to radians
+    
+    # Get the cell size, or use the default of 30' x 30' 
+    if cellsize == None: cellsize = cell_size
     
     # create an array to store rho for each d
-    rho    = np.empty(n) 
-    nstars = np.empty(n) 
+    rho    = np.empty(n, dtype=np.float) 
+    nstars = np.empty(n, dtype=np.float) 
  
     # define fractional positions so that rho can be averaged
     x = np.array([-0.5,  0.0,  0.5,  -0.25,  0.25, -0.5,
-                   0.0,  0.5, -0.25,  0.25, -0.5,   0.0,  0.5]) * cell_size
+                   0.0,  0.5, -0.25,  0.25, -0.5,   0.0,  0.5]) * cellsize
     y = np.array([-0.5, -0.5, -0.5,  -0.25, -0.25,  0.0,
-                   0.0,  0.0,  0.25,  0.25,  0.5,   0.5,  0.5]) * cell_size
+                   0.0,  0.0,  0.25,  0.25,  0.5,   0.5,  0.5]) * cellsize
 
     # change to galactic coordinates (R,Z) from input convert (ra, dec, dist)
     for k in range(0, len(dist)):
 
-        R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k])
+        R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )
     
-        rhoTemp, frac = calc_rho(R,Z)                               # calculate the stellar density
-        rho[k]        = np.mean(rhoTemp)
-        vol           = np.pi * (1800. * dist[k] * au2pc)**2 * 5.   # volume at that d = pi * r^2 * h
+        rhoTemp, frac = calc_rho( R, Z )                               # calculate the stellar density
+        rho[k]        = np.mean( rhoTemp )
+        #vol           = np.pi * (1800. * dist[k] * au2pc)**2 * ddist   # volume at that d = pi * r^2 * h
+        #radius        = cellsize / 2. * deg2rad                        # radius in radians
+        #vol           = np.pi * (radius * dist[k])**2 * ddist          # volume at that d = pi * r^2 * h
+        side          = cellsize * deg2rad                             # cellsize in radians
+        vol           = (side * dist[k])**2 * ddist                  # volume at that d = d * d * h
         nstars[k]     = rho[k] * vol
 
     nstars_tot = np.sum(nstars)
@@ -331,6 +386,7 @@ def count_nstars(ra, dec):
 ########################
 
 def euler(ai, bi, select=1, fk4=False):
+
     """
     NAME:
         EULER
@@ -379,6 +435,7 @@ def euler(ai, bi, select=1, fk4=False):
           Converted to IDL V5.0   W. Landsman   September 1997
           Made J2000 the default, added /FK4 keyword  W. Landsman December 1998
           Add option to specify SELECT as a keyword W. Landsman March 2003
+          Ported to Python, C. Theissen, November 2015
     """
 
     #   J2000 coordinate conversions are based on the following constants
