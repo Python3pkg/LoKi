@@ -7,6 +7,7 @@ import time, os
 import random
 import scipy.interpolate as interpolate
 from slw_constants import Rsun, Tsun, Zsun, rho0, au2pc, cell_size, max_dist, min_dist
+import matplotlib.pyplot as plt
 
 ########################
 
@@ -153,7 +154,7 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
         W = np.array([W]).flatten()
         distance = np.array([distance]).flatten()
         plx = np.array([plx]).flatten()
-
+ 
     goodDistance = 0
 
     if -9999 in ra or -9999 in dec:
@@ -197,17 +198,26 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
     t = np.array( [ [ 0.0548755604,  0.8734370902,  0.4838350155], 
                     [ 0.4941094279, -0.4448296300,  0.7469822445], 
                     [-0.8676661490, -0.1980763734,  0.4559837762] ] )
+    #t = np.array( [ [ -0.0548755604, -0.8734370902, -0.4838350155],
+    #                [  0.4941094279, -0.4448296300,  0.7469822445],
+    #                [ -0.8676661490, -0.1980763734,  0.4559837762] ] )
 
     for i in range(0, len(vrad)):
         a = np.array( [ [cosa[i]*cosd[i], -sina[i], -cosa[i]*sind[i] ], 
                         [sina[i]*cosd[i],  cosa[i], -sina[i]*sind[i] ], 
                         [sind[i]        ,  0      ,  cosd[i]         ] ] )
         b = np.dot(t, a)
+        
+        #print 'b', b
 
         uvw = np.array([ U[i], V[i], W[i] ])
+
         if lsr == True: uvw = uvw - lsr_vel
 
-        vec = np.dot( np.transpose(uvw), b)
+        #vec = np.dot( np.transpose(uvw), b)
+        vec = np.dot( np.transpose(b), uvw)
+        
+        #print 'vec', vec
 
         vrad[i] = vec[0]       
         pmra[i] = vec[1] * plx[i] / k
@@ -245,12 +255,11 @@ def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num):
 
 ########################
 
-
-def inverse_transform_sampling(n_samples):
-    data = np.load('Distance_Dist2.npy')
-    n_bins = int(np.sqrt(len(data)))
-    #print 'INVERSE:', data, n_bins
-    hist, bin_edges = np.histogram(data, bins=n_bins, density=True)    
+def inverse_transform_sampling(nstars, dists, n_samples):
+    #data = np.load('Distance_Dist.npy')
+    #n_bins = int(np.sqrt(len(data)))
+    #hist, bin_edges = np.histogram(data, bins=n_bins, density=True) 
+    hist, bin_edges = nstars/np.trapz(y=nstars, x=dists), np.append(dists, dists[-1]+np.diff(dists)[0])   
     cum_values = np.zeros(bin_edges.shape)
     cum_values[1:] = np.cumsum(hist*np.diff(bin_edges))
     inv_cdf = interpolate.interp1d(cum_values, bin_edges)
@@ -258,7 +267,6 @@ def inverse_transform_sampling(n_samples):
     return inv_cdf(r)
     
 ########################
-
 
 def conv_to_galactic(ra, dec, d):
 
@@ -285,10 +293,12 @@ def conv_to_galactic(ra, dec, d):
 
 ########################
 
-def gen_nstars(ra0, dec0, num, cellsize = None):
+def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
 
     # ra0, dec0, num - input parameters
     # ra, dec, dist  - output arrays for the generated stars
+    # nstars         - number of stars per distance bin along the LOS
+    # dists          - array of distances pertaining to nstars
     
     # Get the cell size, or use the default of 30' x 30' 
     if cellsize == None: cellsize = cell_size
@@ -308,21 +318,19 @@ def gen_nstars(ra0, dec0, num, cellsize = None):
     
         n_lft     = num - n_acc # no. of needed stars
 
-        ra1       = ra0  + (np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize
-        dec1      = dec0 + (np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize
+        ra1       = ra0  + ((np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize)
+        dec1      = dec0 + ((np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize)
         #dist1     = np.random.rand(n_lft,1).flatten() * max_dist
-        #dist1     = np.random.uniform(low=min_dist, high=max_dist, size=(n_lft,1)).flatten()
-        dist1     = inverse_transform_sampling(n_lft)
-        #print 'HERE'
-        #print ra1
-        #print dec1
-        #print dist1
+        #dist1     = np.random.uniform(low=min_dist, high=max_dist, size=(n_lft,1)).flatten() # This is correct
+        #dist1     = inverse_transform_sampling(n_lft)  # This pulls from a defined distribution
+        #dist1     = np.random.power(4, n_lft) * max_dist  # This pulls from a power-law distribution
+        dist1     = inverse_transform_sampling(nstars, dists, n_lft)  # This pulls from a defined distribution
 
         R, T, Z   = conv_to_galactic(ra1, dec1, dist1)
 
-        rho, frac = calc_rho(R,Z)
+        rho, frac = calc_rho(R, Z)
 
-        rand1     = np.random.rand(n_lft,1 ).flatten()
+        rand1     = np.random.rand(n_lft, 1).flatten()
 
         # accept if random number is less than rho(R,Z)/rho0
         ind       = np.where(rand1 < rho / rho0)
@@ -343,7 +351,7 @@ def gen_nstars(ra0, dec0, num, cellsize = None):
 
 ########################
 
-def count_nstars(ra, dec, cellsize = None):
+def count_nstars(ra, dec, cellsize = None, number=False):
     
     ddist   = 5.                                      # steps in distance in pc
     #n       = max_dist / ddist + 1.                   # number of steps to take
@@ -381,7 +389,8 @@ def count_nstars(ra, dec, cellsize = None):
 
     nstars_tot = np.sum(nstars)
     
-    return nstars_tot
+    if number == True: return nstars_tot, nstars, dist
+    else: return nstars_tot
 
 ########################
 
