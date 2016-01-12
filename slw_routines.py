@@ -207,8 +207,6 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
                         [sina[i]*cosd[i],  cosa[i], -sina[i]*sind[i] ], 
                         [sind[i]        ,  0      ,  cosd[i]         ] ] )
         b = np.dot(t, a)
-        
-        #print 'b', b
 
         uvw = np.array([ U[i], V[i], W[i] ])
 
@@ -216,8 +214,6 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
 
         #vec = np.dot( np.transpose(uvw), b)
         vec = np.dot( np.transpose(b), uvw)
-        
-        #print 'vec', vec
 
         vrad[i] = vec[0]       
         pmra[i] = vec[1] * plx[i] / k
