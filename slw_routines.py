@@ -31,8 +31,8 @@ def angdist(ra_1, dec_1, ra_2, dec_2):
 def calc_uvw(R, theta, Z):
 
     Rdot = 0.
-    Tdot = (226. - 0.013*Z - 1.56e-5*Z**2) / R  # will later be converted to Tdot(Z) 
-    Zdot = 0.                                   # typical values for the MW in km/s
+    Tdot = (220. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R  # will later be converted to Tdot(Z) 
+    Zdot = 0.                                        # typical values for the MW in km/s
 
     theta = np.deg2rad(theta)  # convert degrees to radians
 
@@ -64,12 +64,12 @@ def calc_rho(R, Z):
     #H_thin    = 260.
     H_thin    = 300.
     #H_thick   = 900.                   # scale heights in pc
-    H_thick   = 2100.#-700                   # scale heights in pc
+    H_thick   = 2100.                   # scale heights in pc
     
     #L_thin    = 2500.
     L_thin    = 3100.
     #L_thick   = 3500.                  # scale lengths in pc
-    L_thick   = 3700.#-*800                  # scale lengths in pc
+    L_thick   = 3700.                  # scale lengths in pc
     
     #f_thick   = 0.09
     f_thick   = 0.04
@@ -104,14 +104,15 @@ def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
         rand = int(os.urandom(4).encode('hex'), 16)
         np.random.seed(rand)
             
-        n_lft = num - n_acc    # no. of needed stars
+        n_lft = num - n_acc    # number of needed stars
 
-        X  = np.random.rand(n_lft, 1).flatten()*10*sig2 - 5*sig2 # generate random numbers between (-5,5) sigma of a normalized gaussian
+        #X  = np.random.rand(n_lft, 1).flatten()*10*sig2 - 5*sig2 # generate random numbers between (-5,5) sigma of a normalized gaussian
         #X  = random.uniform(-5, 5) # generate random numbers between (-5,5) sigma of a normalized gaussian
+        X  = np.random.normal(mu, sig2, n_lft) # generate random numbers in a normal distribution with mu, sig2 
         z1 = (X - mu) / sig1
         z2 = (X - mu) / sig2
         G1 = 1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-z1**2 / 2) # thin disk
-        G2 = 1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-z2**2 / 2) # thin disk
+        G2 = 1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-z2**2 / 2) # thick disk
  
         Px = f1*G1 + f2*G2
         Fx = 1.2 * np.max(Px)
@@ -135,7 +136,8 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
     
     #lsr_vel = np.array([-8.5, 13.38, 6.49])  # Coskunoglu et al. 2011
     #lsr_vel = np.array([-10, 5.25, 7.17])    # Dehnen & Binney 1998
-    lsr_vel = np.array([-11.1, 12.24, 7.25]) # Schonrich, Dehnen & Binney 2010
+    #lsr_vel = np.array([-11.1, 12.24, 7.25]) # Schonrich, Dehnen & Binney 2010
+    lsr_vel = np.array([-10.3, 6.3, 5.9]) # Test
 
     # Check if (numpy) arrays
     if isinstance(ra, np.ndarray) == False:
@@ -231,7 +233,7 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
 
 ########################
 
-def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num):
+def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num, test=False):
 
     sigmaa    = calc_sigmavel(Z0)                                                       # calculate the UVW velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
     rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
@@ -247,7 +249,8 @@ def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num):
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = np.zeros(num)+ra0,
                                  dec = np.zeros(num)+dec0, distance = np.zeros(num)+dist0 )
 
-    return pmra, pmdec, rv
+    if test == True: return U, V, W
+    else: return pmra, pmdec, rv
 
 ########################
 
@@ -352,7 +355,7 @@ def count_nstars(ra, dec, cellsize = None, number=False):
     ddist   = 5.                                      # steps in distance in pc
     #n       = max_dist / ddist + 1.                   # number of steps to take
     #dist    = np.arange(n, dtype=np.float) * ddist   # 0 < d < 2500 in 5 pc steps
-    dist    = np.arange(min_dist, max_dist + ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
+    dist    = np.arange(min_dist, max_dist+ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
     n = len(dist)                                     # number of steps to take
     deg2rad = np.pi / 180.                            # Convert degrees to radians
     
@@ -380,12 +383,13 @@ def count_nstars(ra, dec, cellsize = None, number=False):
         #radius        = cellsize / 2. * deg2rad                        # radius in radians
         #vol           = np.pi * (radius * dist[k])**2 * ddist          # volume at that d = pi * r^2 * h
         side          = cellsize * deg2rad                             # cellsize in radians
-        vol           = (side * dist[k])**2 * ddist                  # volume at that d = d * d * h
+        vol           = (side * (dist[k]+ddist/2.))**2 * ddist                  # volume at that d = d * d * h
         nstars[k]     = rho[k] * vol
+        #print rho[k], vol, nstars[k], dist[k]
 
     nstars_tot = np.sum(nstars)
     
-    if number == True: return nstars_tot, nstars, dist
+    if number == True: return nstars_tot, nstars, dist+ddist/2.
     else: return nstars_tot
 
 ########################
