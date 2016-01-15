@@ -91,12 +91,38 @@ def calc_rho(R, Z):
 
 ########################
 
+def gen_gaussian(mu, sig1, sig2, f1, f2, num):
+
+    # We use this to make random draws for the UVW velocities based on the kinematics
+    # of the thin and thick disk
+    
+    # Generate values based off the thick disk (more numbers the better, but computationally expensive)
+    # We chose 5-sigma so we wouldn't pull some crazy value
+    x = np.linspace(mu-(5*sig2), mu+(5*sig2), 1000)  
+    
+    # Create the combined probability distribution for the thin and thick disk
+    PDF = f1*(1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-((x-mu)/sig1)**2 / 2)) + f2*(1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-((x-mu)/sig2)**2 / 2))
+    
+    # Build the cumulative distribution function
+    CDF = np.cumsum(PDF/sum(PDF))
+    
+    # Create the inverse cumulative distribution function
+    # We interpolate the probability for whatever value is randomly drawn
+    inv_cdf = interpolate.interp1d(CDF, x)
+    
+    # Pull however many random draws are required
+    r = np.random.rand(num)
+    
+    # return the UVW value
+    return inv_cdf(r)
+
+
+########################
+
+
 def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
 
     n_acc = 0                # number of stars accepted
-    
-    #random.seed()
-    #rand = random.randint(0,4294967295)
 
     while n_acc < num:
     
@@ -111,11 +137,11 @@ def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
         X  = np.random.normal(mu, sig2, n_lft) # generate random numbers in a normal distribution with mu, sig2 
         z1 = (X - mu) / sig1
         z2 = (X - mu) / sig2
-        G1 = 1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-z1**2 / 2) # thin disk
-        G2 = 1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-z2**2 / 2) # thick disk
+        G1 = 1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-z1**2 / 2) # thin disk normal distribution
+        G2 = 1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-z2**2 / 2) # thick disk normal distribution
  
-        Px = f1*G1 + f2*G2
-        Fx = 1.2 * np.max(Px)
+        Px = f1*G1 + f2*G2       # combined total probability for thin and thick disk
+        Fx = 1.2 * np.max(Px)    # normalization factor (why?)
 
         rand = np.random.rand(n_lft, 1).flatten()    # Generate random uniform numbers
         ind = np.where(rand < Px/Fx)                 # uniform deviate comp function
@@ -136,8 +162,8 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
     
     #lsr_vel = np.array([-8.5, 13.38, 6.49])  # Coskunoglu et al. 2011
     #lsr_vel = np.array([-10, 5.25, 7.17])    # Dehnen & Binney 1998
-    #lsr_vel = np.array([-11.1, 12.24, 7.25]) # Schonrich, Dehnen & Binney 2010
-    lsr_vel = np.array([-10.3, 6.3, 5.9]) # Test
+    lsr_vel = np.array([-11.1, 12.24, 7.25]) # Schonrich, Dehnen & Binney 2010
+    #lsr_vel = np.array([-10.3, 6.3, 5.9]) # Test
 
     # Check if (numpy) arrays
     if isinstance(ra, np.ndarray) == False:
@@ -241,9 +267,12 @@ def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num, test=False):
                                                                                         # returns [U,V,W]
 
     # draw from both the thin and thick disks for UVW velocities
-    U = gen_2Dgaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num)
-    V = gen_2Dgaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num)
-    W = gen_2Dgaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num)
+    #U = gen_2Dgaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num) # old way
+    #V = gen_2Dgaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num) # old way
+    #W = gen_2Dgaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num) # old way
+    U = gen_gaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num)
+    V = gen_gaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num)
+    W = gen_gaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num)
 
     # change UVW to pmra and pmdec
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = np.zeros(num)+ra0,
