@@ -6,7 +6,8 @@ import numpy as np
 import time, os
 import random
 import scipy.interpolate as interpolate
-from slw_constants import Rsun, Tsun, Zsun, rho0, au2pc, cell_size, max_dist, min_dist
+import slw_constants as slw_c
+#from slw_constants import Rsun, Tsun, Zsun, rho0, au2pc, cell_size, max_dist, min_dist 
 import matplotlib.pyplot as plt
 
 ########################
@@ -61,31 +62,12 @@ def calc_sigmavel(Z):
 
 def calc_rho(R, Z):
 
-    #H_thin    = 260.
-    H_thin    = 300.
-    #H_thick   = 900.                   # scale heights in pc
-    H_thick   = 2100.                   # scale heights in pc
-    
-    #L_thin    = 2500.
-    L_thin    = 3100.
-    #L_thick   = 3500.                  # scale lengths in pc
-    L_thick   = 3700.                  # scale lengths in pc
-    
-    #f_thick   = 0.09
-    f_thick   = 0.04
-    #f_halo    = 0.0025                 # stellar density in the solar neighborhood
-    f_halo    = 0.0025                 # stellar density in the solar neighborhood
-    
-    f_thin    = 1. - f_thick - f_halo
-    r_halo    = 2.77                   # halo density gradient
-    q         = 0.64                   # halo flattening parameter
+    rho_thin  = slw_c.rho0 * np.exp(-1. * abs(Z-slw_c.Zsun) / slw_c.H_thin)  * np.exp(-1. * (R-slw_c.Rsun) / slw_c.L_thin)
+    rho_thick = slw_c.rho0 * np.exp(-1. * abs(Z-slw_c.Zsun) / slw_c.H_thick) * np.exp(-1. * (R-slw_c.Rsun) / slw_c.L_thick)
+    rho_halo  = slw_c.rho0 * ( slw_c.Rsun / np.sqrt( R**2 + ( Z / slw_c.q )**2) )**slw_c.r_halo
 
-    rho_thin  = rho0 * np.exp(-1. * abs(Z-Zsun) / H_thin)  * np.exp(-1. * (R-Rsun) / L_thin)
-    rho_thick = rho0 * np.exp(-1. * abs(Z-Zsun) / H_thick) * np.exp(-1. * (R-Rsun) / L_thick)
-    rho_halo  = rho0 * ( Rsun / np.sqrt( R**2 + ( Z / q )**2) )**r_halo
-
-    rho       = f_thin * rho_thin + f_thick * rho_thick + f_halo * rho_halo
-    frac      = np.array([f_thin * rho_thin, f_thick * rho_thick, f_halo * rho_halo]) / rho
+    rho       = slw_c.f_thin * slw_c.rho_thin + slw_c.f_thick * slw_c.rho_thick + slw_c.f_halo * slw_c.rho_halo
+    frac      = np.array([slw_c.f_thin * slw_c.rho_thin, slw_c.f_thick * slw_c.rho_thick, slw_c.f_halo * slw_c.rho_halo]) / rho
 
     return rho, frac
 
@@ -116,9 +98,7 @@ def gen_gaussian(mu, sig1, sig2, f1, f2, num):
     # return the UVW value
     return inv_cdf(r)
 
-
 ########################
-
 
 def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
 
@@ -263,7 +243,7 @@ def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num, test=False):
 
     sigmaa    = calc_sigmavel(Z0)                                                       # calculate the UVW velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
     rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
-    vel       = np.array(calc_uvw(R0, T0, Z0)) - np.array(calc_uvw(Rsun, Tsun, Zsun))   # convert to cartesian velocities            
+    vel       = np.array(calc_uvw(R0, T0, Z0)) - np.array(calc_uvw(slw_c.Rsun, slw_c.Tsun, slw_c.Zsun))   # convert to cartesian velocities            
                                                                                         # returns [U,V,W]
 
     # draw from both the thin and thick disks for UVW velocities
@@ -313,9 +293,9 @@ def conv_to_galactic(ra, dec, d):
     l, b = euler(ra, dec)
     l, b = np.deg2rad(l), np.deg2rad(b)
     
-    r   = np.sqrt( (d * np.cos( b ) )**2 + Rsun * (Rsun - 2 * d * np.cos( b ) * np.cos( l ) ) )
+    r   = np.sqrt( (d * np.cos( b ) )**2 + slw_c.Rsun * (slw_c.Rsun - 2 * d * np.cos( b ) * np.cos( l ) ) )
     t   = np.rad2deg( np.arcsin(d * np.sin( l ) * np.cos( b ) / r) )
-    z   = Zsun + d * np.sin( b - np.arctan( Zsun / Rsun) )
+    z   = slw_c.Zsun + d * np.sin( b - np.arctan( slw_c.Zsun / slw_c.Rsun) )
     
     return r, t, z
 
@@ -329,7 +309,7 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
     # dists          - array of distances pertaining to nstars
     
     # Get the cell size, or use the default of 30' x 30' 
-    if cellsize == None: cellsize = cell_size
+    if cellsize == None: cellsize = slw_c.cell_size
 
     # Check if (numpy) arrays
     if isinstance(ra0, np.ndarray) == False:
@@ -348,10 +328,10 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
 
         ra1       = ra0  + ((np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize)
         dec1      = dec0 + ((np.random.rand(n_lft, 1).flatten() - 0.5) * cellsize)
-        #dist1     = np.random.rand(n_lft,1).flatten() * max_dist
-        #dist1     = np.random.uniform(low=min_dist, high=max_dist, size=(n_lft,1)).flatten() # This is correct
+        #dist1     = np.random.rand(n_lft,1).flatten() * slw_c.max_dist
+        #dist1     = np.random.uniform(low=slw_c.min_dist, high=slw_c.max_dist, size=(n_lft,1)).flatten() # This is correct
         #dist1     = inverse_transform_sampling(n_lft)  # This pulls from a defined distribution
-        #dist1     = np.random.power(4, n_lft) * max_dist  # This pulls from a power-law distribution
+        #dist1     = np.random.power(4, n_lft) * slw_c.max_dist  # This pulls from a power-law distribution
         dist1     = inverse_transform_sampling(nstars, dists, n_lft)  # This pulls from a defined distribution
 
         R, T, Z   = conv_to_galactic(ra1, dec1, dist1)
@@ -361,7 +341,7 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
         rand1     = np.random.rand(n_lft, 1).flatten()
 
         # accept if random number is less than rho(R,Z)/rho0
-        ind       = np.where(rand1 < rho / rho0)
+        ind       = np.where(rand1 < rho / slw_c.Zsun)
         count     = len(ind[0])
 
         if count != 0:
@@ -382,14 +362,14 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
 def count_nstars(ra, dec, cellsize = None, number=False):
     
     ddist   = 5.                                      # steps in distance in pc
-    #n       = max_dist / ddist + 1.                   # number of steps to take
+    #n       = slw_c.max_dist / ddist + 1.                   # number of steps to take
     #dist    = np.arange(n, dtype=np.float) * ddist   # 0 < d < 2500 in 5 pc steps
-    dist    = np.arange(min_dist, max_dist+ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
+    dist    = np.arange(slw_c.min_dist, slw_c.max_dist+ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
     n = len(dist)                                     # number of steps to take
     deg2rad = np.pi / 180.                            # Convert degrees to radians
     
     # Get the cell size, or use the default of 30' x 30' 
-    if cellsize == None: cellsize = cell_size
+    if cellsize == None: cellsize = slw_c.cell_size
     
     # create an array to store rho for each d
     rho    = np.empty(n, dtype=np.float) 
@@ -408,7 +388,7 @@ def count_nstars(ra, dec, cellsize = None, number=False):
     
         rhoTemp, frac = calc_rho( R, Z )                               # calculate the stellar density
         rho[k]        = np.mean( rhoTemp )
-        #vol           = np.pi * (1800. * dist[k] * au2pc)**2 * ddist   # volume at that d = pi * r^2 * h
+        #vol           = np.pi * (1800. * dist[k] * slw_c.au2pc)**2 * ddist   # volume at that d = pi * r^2 * h
         #radius        = cellsize / 2. * deg2rad                        # radius in radians
         #vol           = np.pi * (radius * dist[k])**2 * ddist          # volume at that d = pi * r^2 * h
         side          = cellsize * deg2rad                             # cellsize in radians
