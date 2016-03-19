@@ -60,14 +60,16 @@ def calc_sigmavel(Z):
 
 ########################
 
-def calc_rho(R, Z):
+def calc_rho(R, Z, rho0 = None):
 
-    rho_thin  = slw_c.rho0 * np.exp(-1. * abs(Z-slw_c.Zsun) / slw_c.H_thin)  * np.exp(-1. * (R-slw_c.Rsun) / slw_c.L_thin)
-    rho_thick = slw_c.rho0 * np.exp(-1. * abs(Z-slw_c.Zsun) / slw_c.H_thick) * np.exp(-1. * (R-slw_c.Rsun) / slw_c.L_thick)
-    rho_halo  = slw_c.rho0 * ( slw_c.Rsun / np.sqrt( R**2 + ( Z / slw_c.q )**2) )**slw_c.r_halo
+    if rho0 == None: rho0 = slw_c.rho0 # Take the value from the constants file if not provided
 
-    rho       = slw_c.f_thin * slw_c.rho_thin + slw_c.f_thick * slw_c.rho_thick + slw_c.f_halo * slw_c.rho_halo
-    frac      = np.array([slw_c.f_thin * slw_c.rho_thin, slw_c.f_thick * slw_c.rho_thick, slw_c.f_halo * slw_c.rho_halo]) / rho
+    rho_thin  = rho0 * np.exp(-1. * abs(Z-slw_c.Zsun) / slw_c.H_thin)  * np.exp(-1. * (R-slw_c.Rsun) / slw_c.L_thin)
+    rho_thick = rho0 * np.exp(-1. * abs(Z-slw_c.Zsun) / slw_c.H_thick) * np.exp(-1. * (R-slw_c.Rsun) / slw_c.L_thick)
+    rho_halo  = rho0 * ( slw_c.Rsun / np.sqrt( R**2 + ( Z / slw_c.q )**2) )**slw_c.r_halo
+
+    rho       = slw_c.f_thin * rho_thin + slw_c.f_thick * rho_thick + slw_c.f_halo * rho_halo
+    frac      = np.array([slw_c.f_thin * rho_thin, slw_c.f_thick * rho_thick, slw_c.f_halo * rho_halo]) / rho
 
     return rho, frac
 
@@ -359,14 +361,22 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
 
 ########################
 
-def count_nstars(ra, dec, cellsize = None, number=False):
+def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist = None, mindist = None):
     
     ddist   = 5.                                      # steps in distance in pc
     #n       = slw_c.max_dist / ddist + 1.                   # number of steps to take
     #dist    = np.arange(n, dtype=np.float) * ddist   # 0 < d < 2500 in 5 pc steps
-    dist    = np.arange(slw_c.min_dist, slw_c.max_dist+ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
+
+    # Grab the distance limits from the file if non given
+    if mindist == None: mindist = slw_c.min_dist
+    if maxdist == None: maxdist = slw_c.max_dist
+
+    dist    = np.arange(mindist, maxdist+ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
     n = len(dist)                                     # number of steps to take
     deg2rad = np.pi / 180.                            # Convert degrees to radians
+
+    # If the density isn't set, get it from the constants file
+    if rho0 == None: rho0 = slw_c.rho0
     
     # Get the cell size, or use the default of 30' x 30' 
     if cellsize == None: cellsize = slw_c.cell_size
@@ -386,7 +396,7 @@ def count_nstars(ra, dec, cellsize = None, number=False):
 
         R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )
     
-        rhoTemp, frac = calc_rho( R, Z )                               # calculate the stellar density
+        rhoTemp, frac = calc_rho( R, Z, rho0=rho0 )                               # calculate the stellar density
         rho[k]        = np.mean( rhoTemp )
         #vol           = np.pi * (1800. * dist[k] * slw_c.au2pc)**2 * ddist   # volume at that d = pi * r^2 * h
         #radius        = cellsize / 2. * deg2rad                        # radius in radians
