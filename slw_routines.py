@@ -31,9 +31,13 @@ def angdist(ra_1, dec_1, ra_2, dec_2):
 
 def calc_uvw(R, theta, Z):
 
-    Rdot = 0.
-    Tdot = (220. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R  # will later be converted to Tdot(Z) 
-    Zdot = 0.                                        # typical values for the MW in km/s
+    R     = np.array(R).flatten()
+    theta = np.array(theta).flatten()
+    Z     = np.array(Z).flatten()
+
+    Rdot = np.zeros(len(Z))
+    Tdot = (220. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
+    Zdot = np.zeros(len(Z))                             # typical values for the MW in km/s
 
     theta = np.deg2rad(theta)  # convert degrees to radians
 
@@ -53,14 +57,22 @@ def calc_sigmavel(Z):
     coeff = np.array([7.085, 3.199, 3.702, 10.383, 1.105, 5.403])
     power = np.array([0.276, 0.354, 0.307,  0.285, 0.625, 0.309])
 
+    # convert Z to array for optimization
+    Z = np.array(Z).flatten()
+
     # calculate sigma_vel from the empirical power-law fit
-    sigmaa = coeff * abs(Z)**power
+    if len(Z) > 1:
+        sigmaa = coeff * np.power.outer(abs(Z), power)
+    else: sigmaa = coeff * abs(Z)**power
 
     return sigmaa
 
 ########################
 
 def calc_rho(R, Z, rho0 = None):
+
+    R = np.array(R).flatten()
+    Z = np.array(Z).flatten()
 
     if rho0 == None: rho0 = slw_c.rho0 # Take the value from the constants file if not provided
 
@@ -76,10 +88,10 @@ def calc_rho(R, Z, rho0 = None):
 ########################
 
 def gen_gaussian(mu, sig1, sig2, f1, f2, num):
-
+    
     # We use this to make random draws for the UVW velocities based on the kinematics
     # of the thin and thick disk
-    
+
     # Generate values based off the thick disk (more numbers the better, but computationally expensive)
     # We chose 5-sigma so we wouldn't pull some crazy value
     x = np.linspace(mu-(5*sig2), mu+(5*sig2), 1000)  
@@ -102,8 +114,52 @@ def gen_gaussian(mu, sig1, sig2, f1, f2, num):
 
 ########################
 
-def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
+def gen_gaussian_new(mu, sig1, sig2, f1, f2):
+    
+    # We use this to make random draws for the UVW velocities based on the kinematics
+    # of the thin and thick disk
 
+    mu   = np.array(mu).flatten()
+    sig1 = np.array(sig1).flatten()
+    sig2 = np.array(sig2).flatten()
+    f1   = np.array(f1).flatten()
+    f2   = np.array(f2).flatten()
+    
+    # Generate values based off the thick disk (more numbers the better, but computationally expensive)
+    # We chose 5-sigma so we wouldn't pull some crazy value
+    x = np.array([np.linspace(i-(5*j), i+(5*j), 1000) for i,j in zip(mu, sig2)])  # NEED TO CHANGE THIS TO 1000
+    
+    # Create the combined probability distribution for the thin and thick disk
+    PDF = f1*(1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-((x.T-mu)/sig1)**2 / 2)) + f2*(1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-((x.T-mu)/sig2)**2 / 2))
+
+    # Build the cumulative distribution function
+    CDF = np.cumsum(PDF/np.sum(PDF, axis=0), axis=0)
+    
+    # Create the inverse cumulative distribution function
+    # We interpolate the probability for whatever value is randomly drawn
+    inv_cdf = np.array([ interpolate.interp1d(i, j) for i,j in zip(CDF.T, x)]) 
+    r = np.random.rand(len(mu))
+    results = np.array([ inv_cdf[i](j) for i,j in zip(range(0, len(r)), r)]) 
+    
+    # return the UVW value
+    return results
+
+########################
+
+def gen_2Dgaussian(mu, sig1, sig2, f1, f2):
+
+    ################ New way
+    X  = np.random.normal(mu, sig2, n_lft) # generate random numbers in a normal distribution with mu, sig2 
+    z1 = (X - mu) / sig1
+    z2 = (X - mu) / sig2
+    G1 = 1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-z1**2 / 2) # thin disk normal distribution
+    G2 = 1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-z2**2 / 2) # thick disk normal distribution
+
+    Xarr = X
+
+    ################ Old Way
+    """
+    num = len(mu)
     n_acc = 0                # number of stars accepted
 
     while n_acc < num:
@@ -134,7 +190,7 @@ def gen_2Dgaussian(mu, sig1, sig2, f1, f2, num):
             if n_acc == 0: Xarr = X[ind].flatten()
             else: Xarr = np.append(Xarr, X[ind].flatten())
             n_acc += count
-
+    """
     return Xarr
 
 ########################
@@ -252,13 +308,34 @@ def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num, test=False):
     #U = gen_2Dgaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num) # old way
     #V = gen_2Dgaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num) # old way
     #W = gen_2Dgaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num) # old way
-    U = gen_gaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num)
-    V = gen_gaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num)
-    W = gen_gaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num)
+
+    U = gen_gaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num) # newer old way
+    V = gen_gaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num) # newer old way
+    W = gen_gaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num) # newer old way
 
     # change UVW to pmra and pmdec
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = np.zeros(num)+ra0,
                                  dec = np.zeros(num)+dec0, distance = np.zeros(num)+dist0 )
+
+    if test == True: return U, V, W
+    else: return pmra, pmdec, rv
+
+########################
+
+def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
+
+    sigmaa    = calc_sigmavel(Z0)                                                       # calculate the UVW velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
+    rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
+    vel       = np.array(calc_uvw(R0, T0, Z0)) - np.array(calc_uvw(slw_c.Rsun, slw_c.Tsun, slw_c.Zsun))   # convert to cartesian velocities            
+                                                                                        # returns [U,V,W]
+
+    U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], frac[0], 1-frac[0])
+    V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], frac[0], 1-frac[0])
+    W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], frac[0], 1-frac[0])
+
+    # change UVW to pmra and pmdec
+    rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = ra0,
+                                 dec = dec0, distance = dist0 )
 
     if test == True: return U, V, W
     else: return pmra, pmdec, rv
@@ -361,11 +438,32 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
 
 ########################
 
+def gen_nstars_new(ra0, dec0, num, nstars, dists, cellsize = None):
+
+    # ra0, dec0, num - input parameters
+    # ra, dec, dist  - output arrays for the generated stars
+    # nstars         - number of stars per distance bin along the LOS
+    # dists          - array of distances pertaining to nstars
+    
+    # Get the cell size, or use the default of 30' x 30' 
+    if cellsize == None: cellsize = slw_c.cell_size
+
+    # Check if (numpy) arrays
+    if isinstance(ra0, np.ndarray) == False:
+        ra0  = np.array(ra0)
+        dec0 = np.array(dec0)
+
+    ra1       = ra0  + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
+    dec1      = dec0 + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
+    dist1     = inverse_transform_sampling(nstars, dists, num)  # This pulls from a defined distribution
+
+    return ra1, dec1, dist1
+
+########################
+
 def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist = None, mindist = None):
     
     ddist   = 5.                                      # steps in distance in pc
-    #n       = slw_c.max_dist / ddist + 1.                   # number of steps to take
-    #dist    = np.arange(n, dtype=np.float) * ddist   # 0 < d < 2500 in 5 pc steps
 
     # Grab the distance limits from the file if non given
     if mindist == None: mindist = slw_c.min_dist
@@ -376,10 +474,12 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist 
     deg2rad = np.pi / 180.                            # Convert degrees to radians
 
     # If the density isn't set, get it from the constants file
-    if rho0 == None: rho0 = slw_c.rho0
+    if rho0 == None: 
+        rho0 = slw_c.rho0
     
     # Get the cell size, or use the default of 30' x 30' 
-    if cellsize == None: cellsize = slw_c.cell_size
+    if cellsize == None: 
+        cellsize = slw_c.cell_size
     
     # create an array to store rho for each d
     rho    = np.empty(n, dtype=np.float) 
@@ -391,25 +491,22 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist 
     y = np.array([-0.5, -0.5, -0.5,  -0.25, -0.25,  0.0,
                    0.0,  0.0,  0.25,  0.25,  0.5,   0.5,  0.5]) * cellsize
 
-    # change to galactic coordinates (R,Z) from input convert (ra, dec, dist)
-    for k in range(0, len(dist)):
+    for k in range(0, len(dist)): # step through each distance to integrate out
 
-        R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )
+        R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )   # Convert coordinates to galactic cylindrical
     
-        rhoTemp, frac = calc_rho( R, Z, rho0=rho0 )                               # calculate the stellar density
+        rhoTemp, frac = calc_rho( R, Z, rho0=rho0 )                # calculate the stellar density
         rho[k]        = np.mean( rhoTemp )
-        #vol           = np.pi * (1800. * dist[k] * slw_c.au2pc)**2 * ddist   # volume at that d = pi * r^2 * h
-        #radius        = cellsize / 2. * deg2rad                        # radius in radians
-        #vol           = np.pi * (radius * dist[k])**2 * ddist          # volume at that d = pi * r^2 * h
-        side          = cellsize * deg2rad                             # cellsize in radians
-        vol           = (side * (dist[k]+ddist/2.))**2 * ddist                  # volume at that d = d * d * h
-        nstars[k]     = rho[k] * vol
-        #print rho[k], vol, nstars[k], dist[k]
+        side          = cellsize * deg2rad                         # cellsize in radians
+        vol           = (side * (dist[k]+ddist/2.))**2 * ddist     # volume at that d = d * d * h
+        nstars[k]     = rho[k] * vol                               # Add the number of stars (density * volume)
 
-    nstars_tot = np.sum(nstars)
+    nstars_tot = np.sum(nstars)                                    # Compute the total number of stars within the volume
     
-    if number == True: return nstars_tot, nstars, dist+ddist/2.
-    else: return nstars_tot
+    if number == True: # This says you want the distributions of stars and distances
+        return nstars_tot, nstars, dist+ddist/2.
+    else: 
+        return nstars_tot
 
 ########################
 
