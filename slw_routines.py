@@ -329,9 +329,14 @@ def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
     vel       = np.array(calc_uvw(R0, T0, Z0)) - np.array(calc_uvw(slw_c.Rsun, slw_c.Tsun, slw_c.Zsun))   # convert to cartesian velocities            
                                                                                         # returns [U,V,W]
 
-    U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], frac[0], 1-frac[0])
-    V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], frac[0], 1-frac[0])
-    W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], frac[0], 1-frac[0])
+    if len(R0) == 1:
+        U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0])
+        V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0])
+        W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0])
+    else:
+        U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], frac[0], 1-frac[0])
+        V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], frac[0], 1-frac[0])
+        W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], frac[0], 1-frac[0])
 
     # change UVW to pmra and pmdec
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = ra0,
