@@ -127,7 +127,7 @@ def gen_gaussian_new(mu, sig1, sig2, f1, f2):
     
     # Generate values based off the thick disk (more numbers the better, but computationally expensive)
     # We chose 5-sigma so we wouldn't pull some crazy value
-    x = np.array([np.linspace(i-(5*j), i+(5*j), 1000) for i,j in zip(mu, sig2)])  # NEED TO CHANGE THIS TO 1000
+    x = np.array([np.linspace(i-(5*j), i+(5*j), 10000) for i,j in zip(mu, sig2)])  
     
     # Create the combined probability distribution for the thin and thick disk
     PDF = f1*(1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-((x.T-mu)/sig1)**2 / 2)) + f2*(1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-((x.T-mu)/sig2)**2 / 2))
