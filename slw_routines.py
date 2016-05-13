@@ -133,13 +133,19 @@ def gen_gaussian_new(mu, sig1, sig2, f1, f2):
     PDF = f1*(1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-((x.T-mu)/sig1)**2 / 2)) + f2*(1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-((x.T-mu)/sig2)**2 / 2))
 
     # Build the cumulative distribution function
-    CDF = np.cumsum(PDF/np.sum(PDF, axis=0), axis=0)
+    CDF = np.cumsum(PDF/np.sum(PDF, axis=0), axis=0) 
     
     # Create the inverse cumulative distribution function
     # We interpolate the probability for whatever value is randomly drawn
-    inv_cdf = np.array([ interpolate.interp1d(i, j) for i,j in zip(CDF.T, x)]) 
-    r = np.random.rand(len(mu))
-    results = np.array([ inv_cdf[i](j) for i,j in zip(range(0, len(r)), r)]) 
+    inv_cdf = np.array([ interpolate.interp1d(i, j) for i,j in zip(CDF.T, x)])
+
+    # Need to get the maximim minimum value for the RNG
+    # This will make sure we don't get a number outside the interpolation range
+    minVal = np.max(np.min(CDF.T, axis=1))
+    r = np.random.uniform(low = minVal, high = 1.0, size = len(mu))
+    #r = np.random.rand(len(mu)) # Old way
+
+    results = np.array([ inv_cdf[i](j) for i,j in zip(range(0, len(r)), r)])
     
     # return the UVW value
     return results
@@ -498,15 +504,17 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist 
 
     for k in range(0, len(dist)): # step through each distance to integrate out
 
-        R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )   # Convert coordinates to galactic cylindrical
+        R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )                 # Convert coordinates to galactic cylindrical
     
-        rhoTemp, frac = calc_rho( R, Z, rho0=rho0 )                # calculate the stellar density
+        rhoTemp, frac = calc_rho( R, Z, rho0=rho0 )                              # calculate the stellar density
         rho[k]        = np.mean( rhoTemp )
-        side          = cellsize * deg2rad                         # cellsize in radians
-        vol           = (side * (dist[k]+ddist/2.))**2 * ddist     # volume at that d = d * d * h
-        nstars[k]     = rho[k] * vol                               # Add the number of stars (density * volume)
+        sideRA        = cellsize * deg2rad * np.cos(dec*deg2rad)                 # cellsize in radians
+        sideDEC       = cellsize * deg2rad                                       # cellsize in radians
+        #vol           = (side * (dist[k]+ddist/2.))**2 * ddist                  # volume at that d = d * d * h
+        vol           = (sideRA * sideDEC) * (dist[k]+ddist/2.)**2 * ddist       # volume at that d = d * d * h
+        nstars[k]     = rho[k] * vol                                             # Add the number of stars (density * volume)
 
-    nstars_tot = np.sum(nstars)                                    # Compute the total number of stars within the volume
+    nstars_tot = np.sum(nstars)                                                  # Compute the total number of stars within the volume
     
     if number == True: # This says you want the distributions of stars and distances
         return nstars_tot, nstars, dist+ddist/2.
