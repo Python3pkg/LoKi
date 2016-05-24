@@ -261,31 +261,6 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
 
 ########################
 
-def gen_pm(R0, T0, Z0, ra0, dec0, dist0, num, test=False):
-
-    sigmaa    = calc_sigmavel(Z0)                                                       # calculate the UVW velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
-    rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
-    vel       = np.array(calc_uvw(R0, T0, Z0)) - np.array(calc_uvw(slw_c.Rsun, slw_c.Tsun, slw_c.Zsun))   # convert to cartesian velocities            
-                                                                                        # returns [U,V,W]
-
-    # draw from both the thin and thick disks for UVW velocities
-    #U = gen_2Dgaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num) # old way
-    #V = gen_2Dgaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num) # old way
-    #W = gen_2Dgaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num) # old way
-
-    U = gen_gaussian(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0], num) # newer old way
-    V = gen_gaussian(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0], num) # newer old way
-    W = gen_gaussian(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0], num) # newer old way
-
-    # change UVW to pmra and pmdec
-    rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = np.zeros(num)+ra0,
-                                 dec = np.zeros(num)+dec0, distance = np.zeros(num)+dist0 )
-
-    if test == True: return U, V, W
-    else: return pmra, pmdec, rv
-
-########################
-
 def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
 
     sigmaa    = calc_sigmavel(Z0)                                                       # calculate the UVW velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
@@ -294,13 +269,13 @@ def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
                                                                                         # returns [U,V,W]
 
     if len(R0) == 1:
-        U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], frac[0], 1-frac[0])
-        V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], frac[0], 1-frac[0])
-        W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], frac[0], 1-frac[0])
+        U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], frac[0], frac[1])
+        V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], frac[0], frac[1])
+        W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], frac[0], frac[1])
     else:
-        U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], frac[0], 1-frac[0])
-        V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], frac[0], 1-frac[0])
-        W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], frac[0], 1-frac[0])
+        U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], frac[0], frac[1])
+        V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], frac[0], frac[1])
+        W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], frac[0], frac[1])
 
     # change UVW to pmra and pmdec
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = ra0,
