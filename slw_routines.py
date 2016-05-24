@@ -159,55 +159,6 @@ def gen_gaussian_new(mu, sig1, sig2, f1, f2):
 
 ########################
 
-def gen_2Dgaussian(mu, sig1, sig2, f1, f2):
-
-    ################ New way
-    X  = np.random.normal(mu, sig2, n_lft) # generate random numbers in a normal distribution with mu, sig2 
-    z1 = (X - mu) / sig1
-    z2 = (X - mu) / sig2
-    G1 = 1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-z1**2 / 2) # thin disk normal distribution
-    G2 = 1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-z2**2 / 2) # thick disk normal distribution
-
-    Xarr = X
-
-    ################ Old Way
-    """
-    num = len(mu)
-    n_acc = 0                # number of stars accepted
-
-    while n_acc < num:
-    
-        # Seed the random generator each time
-        rand = int(os.urandom(4).encode('hex'), 16)
-        np.random.seed(rand)
-            
-        n_lft = num - n_acc    # number of needed stars
-
-        #X  = np.random.rand(n_lft, 1).flatten()*10*sig2 - 5*sig2 # generate random numbers between (-5,5) sigma of a normalized gaussian
-        #X  = random.uniform(-5, 5) # generate random numbers between (-5,5) sigma of a normalized gaussian
-        X  = np.random.normal(mu, sig2, n_lft) # generate random numbers in a normal distribution with mu, sig2 
-        z1 = (X - mu) / sig1
-        z2 = (X - mu) / sig2
-        G1 = 1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-z1**2 / 2) # thin disk normal distribution
-        G2 = 1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-z2**2 / 2) # thick disk normal distribution
- 
-        Px = f1*G1 + f2*G2       # combined total probability for thin and thick disk
-        Fx = 1.2 * np.max(Px)    # normalization factor (why?)
-
-        rand = np.random.rand(n_lft, 1).flatten()    # Generate random uniform numbers
-        ind = np.where(rand < Px/Fx)                 # uniform deviate comp function
- 
-        count = len(ind[0])
-
-        if count != 0:
-            if n_acc == 0: Xarr = X[ind].flatten()
-            else: Xarr = np.append(Xarr, X[ind].flatten())
-            n_acc += count
-    """
-    return Xarr
-
-########################
-
 def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, plx=-9999, lsr=True):
 
     
