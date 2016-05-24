@@ -56,14 +56,21 @@ def calc_sigmavel(Z):
     # see ~/sdss/uw/velocity_ellipsoid.pro[.ps] FOR fitting algorithm[fit]
     coeff = np.array([7.085, 3.199, 3.702, 10.383, 1.105, 5.403])
     power = np.array([0.276, 0.354, 0.307,  0.285, 0.625, 0.309])
+    coeff1 = np.array([23.5, 19.105, 13.9145, 32.9145, 22.105, 29.145])
+    coeff2 = np.array([0.03, 0.0183, 0.02167, 0.04167, 0.0583, 0.0167])
 
     # convert Z to array for optimization
     Z = np.array(Z).flatten()
 
     # calculate sigma_vel from the empirical power-law fit
     if len(Z) > 1:
-        sigmaa = coeff * np.power.outer(abs(Z), power)
-    else: sigmaa = coeff * abs(Z)**power
+        #sigmaa = coeff * np.power.outer(abs(Z), power)
+        #print np.power.outer(abs(Z), power).shape
+        #sys.exit()
+        sigmaa = coeff1 + np.outer(abs(Z), coeff2)
+    else:
+        #sigmaa = coeff * abs(Z)**power
+        sigmaa = coeff1 + coeff2 * abs(Z)
 
     return sigmaa
 
@@ -371,9 +378,12 @@ def conv_to_galactic(ra, dec, d):
     r2d = 180. / np.pi # radians to degrees
 
     # Check if (numpy) arrays
-    if isinstance(ra, np.ndarray)  == False: ra  = np.array(ra).flatten()
-    if isinstance(dec, np.ndarray) == False: dec = np.array(dec).flatten()
-    if isinstance(d, np.ndarray)   == False: d   = np.array(d).flatten()
+    if isinstance(ra, np.ndarray)  == False:
+        ra  = np.array(ra).flatten()
+    if isinstance(dec, np.ndarray) == False:
+        dec = np.array(dec).flatten()
+    if isinstance(d, np.ndarray)   == False:
+        d   = np.array(d).flatten()
 
     # Convert values to Galactic coordinates
     """
@@ -399,7 +409,8 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
     # dists          - array of distances pertaining to nstars
     
     # Get the cell size, or use the default of 30' x 30' 
-    if cellsize == None: cellsize = slw_c.cell_size
+    if cellsize == None:
+        cellsize = slw_c.cell_size
 
     # Check if (numpy) arrays
     if isinstance(ra0, np.ndarray) == False:
@@ -449,7 +460,7 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None):
 
 ########################
 
-def gen_nstars_new(ra0, dec0, num, nstars, dists, cellsize = None):
+def gen_nstars_new(ra0, dec0, num, nstars, dists, cellsize = None, range1=False):
 
     # ra0, dec0, num - input parameters
     # ra, dec, dist  - output arrays for the generated stars
@@ -461,28 +472,47 @@ def gen_nstars_new(ra0, dec0, num, nstars, dists, cellsize = None):
 
     # Check if (numpy) arrays
     if isinstance(ra0, np.ndarray) == False:
-        ra0  = np.array(ra0)
-        dec0 = np.array(dec0)
+        ra0  = np.array([ra0]).flatten()
 
-    ra1       = ra0  + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
-    dec1      = dec0 + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
+    if isinstance(dec0, np.ndarray) == False:
+        dec0 = np.array([dec0]).flatten()
+
+    if len(ra0) == 2:
+        range1 = True
+    
+    if range1 == True:
+        ra1  = np.random.uniform( min(ra0), max(ra0), size=num)
+        dec1 = np.random.uniform( min(dec0), max(dec0), size=num)
+    else:
+        ra1       = ra0  + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
+        dec1      = dec0 + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
     dist1     = inverse_transform_sampling(nstars, dists, num)  # This pulls from a defined distribution
 
     return ra1, dec1, dist1
 
 ########################
 
-def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist = None, mindist = None):
-    
-    ddist   = 5.                                      # steps in distance in pc
+def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist = None, mindist = None, range1 = False):
+
+    # Check if RADEC are arrays, and if so sort them
+    if isinstance(ra, np.ndarray) == False:
+        ra = np.array([ra]).flatten()
+        ra = np.sort(ra)
+    if isinstance(dec, np.ndarray) == False:
+        dec = np.array([dec]).flatten()
+        dec = np.sort(dec)
+        
+    ddist = 1.                                      # steps in distance in pc
 
     # Grab the distance limits from the file if non given
-    if mindist == None: mindist = slw_c.min_dist
-    if maxdist == None: maxdist = slw_c.max_dist
+    if mindist == None:
+        mindist = slw_c.min_dist
+    if maxdist == None:
+        maxdist = slw_c.max_dist
 
-    dist    = np.arange(mindist, maxdist+ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in 5 pc steps
-    n = len(dist)                                     # number of steps to take
-    deg2rad = np.pi / 180.                            # Convert degrees to radians
+    dist    = np.arange(mindist, maxdist+ddist, ddist, dtype=np.float)   # min_dist < d < max_dist in X pc steps
+    n       = len(dist)                                                  # number of steps to take
+    deg2rad = np.pi / 180.                                               # Convert degrees to radians
 
     # If the density isn't set, get it from the constants file
     if rho0 == None: 
@@ -502,16 +532,36 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, number = False, maxdist 
     y = np.array([-0.5, -0.5, -0.5,  -0.25, -0.25,  0.0,
                    0.0,  0.0,  0.25,  0.25,  0.5,   0.5,  0.5]) * cellsize
 
+    if len(ra) == 2:
+        range1 = True
+        nx, ny = (100, 100)
+        xv     = np.linspace(ra[0], ra[1], nx)
+        yv     = np.linspace(dec[0], dec[1], ny)
+        x, y   = np.meshgrid(xv, yv)
+
     for k in range(0, len(dist)): # step through each distance to integrate out
 
-        R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )                 # Convert coordinates to galactic cylindrical
-    
-        rhoTemp, frac = calc_rho( R, Z, rho0=rho0 )                              # calculate the stellar density
-        rho[k]        = np.mean( rhoTemp )
-        sideRA        = cellsize * deg2rad * np.cos(dec*deg2rad)                 # cellsize in radians
-        sideDEC       = cellsize * deg2rad                                       # cellsize in radians
-        #vol           = (side * (dist[k]+ddist/2.))**2 * ddist                  # volume at that d = d * d * h
-        vol           = (sideRA * sideDEC) * (dist[k]+ddist/2.)**2 * ddist       # volume at that d = d * d * h
+        if range1 == True:
+            R, T, Z       = conv_to_galactic( x, y, dist[k] )                 # Convert coordinates to galactic cylindrical
+        else:
+            R, T, Z       = conv_to_galactic( ra+x, dec+y, dist[k] )          # Convert coordinates to galactic cylindrical
+        
+        rhoTemp, frac = calc_rho( R, Z, rho0=rho0 )                           # Calculate the stellar density
+        rho[k]        = np.mean( rhoTemp )                                    # Take the mean density across the volume
+        
+        if range1 == True:
+            #vol = 1./3. * ((dist[k])**3 - (dist[k]+ddist)**3) * (np.cos(max(dec)*d2r) - np.cos(min(dec)*d2r)) * (max(ra) - min(ra))*d2r
+            #vol = 2.*np.tan( .5*(max(ra)-min(ra))*deg2rad ) * 2.*np.tan( .5*(max(dec)-min(dec))*deg2rad ) * np.cos( (dec[0]+dec[1]) / 2. * deg2rad) * (dist[k] + ddist/2.)**2 * (ddist)
+            vol  = 1./3. * ((dist[k] + ddist)**3 - (dist[k])**3) * (np.cos( (90-dec[0])*deg2rad ) - np.cos( (90-dec[1])*deg2rad) ) * (ra[0] - ra[1])*deg2rad
+            if vol < 0: vol = abs(vol)
+        else: # The case for a gridsize
+            #sideRA        = cellsize * deg2rad * np.cos(dec*deg2rad)                 # cellsize in radians (small angle approximation)
+            #sideDEC       = cellsize * deg2rad                                       # cellsize in radians (small angle approximation)
+            #sideRA        = 2.*np.tan( .5*cellsize*deg2rad ) * np.cos(dec*deg2rad)   # cellsize in radians (full solution)
+            #sideDEC       = 2.*np.tan( .5*cellsize*deg2rad )                         # cellsize in radians (full solution)
+            #vol           = (sideRA * sideDEC) * (dist[k]+ddist/2.)**2 * ddist   # volume at that d = d * d * h
+            vol  = 1./3. * ((dist[k] + ddist)**3 - (dist[k])**3) * (np.cos( (90-dec-cellsize/2.)*deg2rad ) - np.cos( (90-dec+cellsize/2.)*deg2rad) ) * ((ra+cellsize/2.) - (ra-cellsize/2.))*deg2rad
+            if vol < 0: vol = abs(vol)
         nstars[k]     = rho[k] * vol                                             # Add the number of stars (density * volume)
 
     nstars_tot = np.sum(nstars)                                                  # Compute the total number of stars within the volume
@@ -527,9 +577,13 @@ def radec2lb(ra, dec):
 
     from numpy import array, sin, cos, pi, deg2rad, rad2deg, arctan2, arcsin, minimum
 
-    # Fix the dec values if needed, should be between (-90,90)
+    # Make numpy arrays
+    if isinstance(ra, np.ndarray) == False:
+        ra = np.array(ra).flatten()
     if isinstance(dec, np.ndarray) == False:
         dec = np.array(dec).flatten()
+        
+    # Fix the dec values if needed, should be between (-90,90)
     dec[np.where(dec > 90)]  = dec[np.where(dec > 90)] - 180
     dec[np.where(dec < -90)] = dec[np.where(dec < -90)] + 180
     
