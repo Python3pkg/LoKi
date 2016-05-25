@@ -94,34 +94,7 @@ def calc_rho(R, Z, rho0 = None):
 
 ########################
 
-def gen_gaussian(mu, sig1, sig2, f1, f2, num):
-    
-    # We use this to make random draws for the UVW velocities based on the kinematics
-    # of the thin and thick disk
-
-    # Generate values based off the thick disk (more numbers the better, but computationally expensive)
-    # We chose 5-sigma so we wouldn't pull some crazy value
-    x = np.linspace(mu-(5*sig2), mu+(5*sig2), 1000)  
-    
-    # Create the combined probability distribution for the thin and thick disk
-    PDF = f1*(1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-((x-mu)/sig1)**2 / 2)) + f2*(1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-((x-mu)/sig2)**2 / 2))
-    
-    # Build the cumulative distribution function
-    CDF = np.cumsum(PDF/sum(PDF))
-    
-    # Create the inverse cumulative distribution function
-    # We interpolate the probability for whatever value is randomly drawn
-    inv_cdf = interpolate.interp1d(CDF, x)
-    
-    # Pull however many random draws are required
-    r = np.random.rand(num)
-    
-    # return the UVW value
-    return inv_cdf(r)
-
-########################
-
-def gen_gaussian_new(mu, sig1, sig2, f1, f2):
+def gen_gaussian_new(mu, sig1, sig2, sig3, f1, f2, f3):
     
     # We use this to make random draws for the UVW velocities based on the kinematics
     # of the thin and thick disk
@@ -129,15 +102,19 @@ def gen_gaussian_new(mu, sig1, sig2, f1, f2):
     mu   = np.array(mu).flatten()
     sig1 = np.array(sig1).flatten()
     sig2 = np.array(sig2).flatten()
+    sig3 = np.array(sig3).flatten()
     f1   = np.array(f1).flatten()
     f2   = np.array(f2).flatten()
+    f3   = np.array(f3).flatten()
     
-    # Generate values based off the thick disk (more numbers the better, but computationally expensive)
+    # Generate values based off the halo (largst dispersion, more numbers the better, but computationally expensive)
     # We chose 5-sigma so we wouldn't pull some crazy value
-    x = np.array([np.linspace(i-(5*j), i+(5*j), 10000) for i,j in zip(mu, sig2)])  
+    x = np.array([np.linspace(i-(5*j), i+(5*j), 30000) for i,j in zip(mu, sig3)])
     
     # Create the combined probability distribution for the thin and thick disk
-    PDF = f1*(1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-((x.T-mu)/sig1)**2 / 2)) + f2*(1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-((x.T-mu)/sig2)**2 / 2))
+    PDF = f1*(1 / (np.sqrt(2*np.pi) * sig1)*np.exp(-((x.T-mu)/sig1)**2 / 2)) + \
+          f2*(1 / (np.sqrt(2*np.pi) * sig2)*np.exp(-((x.T-mu)/sig2)**2 / 2)) + \
+          f3*(1 / (np.sqrt(2*np.pi) * sig3)*np.exp(-((x.T-mu)/sig3)**2 / 2))
 
     # Build the cumulative distribution function
     CDF = np.cumsum(PDF/np.sum(PDF, axis=0), axis=0) 
@@ -269,13 +246,13 @@ def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
                                                                                         # returns [U,V,W]
 
     if len(R0) == 1:
-        U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], frac[0], frac[1])
-        V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], frac[0], frac[1])
-        W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], frac[0], frac[1])
+        U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], np.zeros(len(frac[0]))+140, frac[0], frac[1], frac[2])
+        V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], np.zeros(len(frac[0]))+100, frac[0], frac[1], frac[2])
+        W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], np.zeros(len(frac[0]))+80,  frac[0], frac[1], frac[2])
     else:
-        U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], frac[0], frac[1])
-        V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], frac[0], frac[1])
-        W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], frac[0], frac[1])
+        U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], np.zeros(len(frac[0]))+140, frac[0], frac[1], frac[2])
+        V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], np.zeros(len(frac[0]))+100, frac[0], frac[1], frac[2])
+        W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], np.zeros(len(frac[0]))+80,  frac[0], frac[1], frac[2])
 
     # change UVW to pmra and pmdec
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = ra0,
