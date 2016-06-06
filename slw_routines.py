@@ -1,13 +1,8 @@
-#! /usr/bin/env python
-
 import numpy as np
-#from astropy import units as u
-#from astropy.coordinates import SkyCoord
 import time, os
 import random
 import scipy.interpolate as interpolate
 import slw_constants as slw_c
-#from slw_constants import Rsun, Tsun, Zsun, rho0, au2pc, cell_size, max_dist, min_dist 
 import matplotlib.pyplot as plt
 
 ########################
@@ -54,10 +49,25 @@ def calc_sigmavel(Z):
     # Values obtained by fitting sigma = coeff * Z^power 
     # data from Bochanski et al. (2006)
     # see ~/sdss/uw/velocity_ellipsoid.pro[.ps] FOR fitting algorithm[fit]
-    coeff = np.array([7.085, 3.199, 3.702, 10.383, 1.105, 5.403])
-    power = np.array([0.276, 0.354, 0.307,  0.285, 0.625, 0.309])
+    coeff  = np.array([7.085, 3.199, 3.702, 10.383, 1.105, 5.403]) # This was for the power-law fit
+    power  = np.array([0.276, 0.354, 0.307,  0.285, 0.625, 0.309]) # This was for the power-law fit
+    """
+    # By eye linear fits to Bochanski et al. 2007
     coeff1 = np.array([23.5, 19.105, 13.9145, 32.9145, 22.105, 29.145])
     coeff2 = np.array([0.03, 0.0183, 0.02167, 0.04167, 0.0583, 0.0167])
+    """
+    """
+    # Measured as a linear fuction using Bochanski et al. 2007
+    coeff1 = np.array([25.2377322033,  14.7878971614,   13.8771101207,
+                       34.4139935894, 15.3784418334, 23.8661980341])
+    coeff2 = np.array([0.0262979761654, 0.0284643404931, 0.022023363188,
+                       0.0511101810905, 0.079302710092, 0.0242548818891])
+    """
+    # Measured as a linear fuction using Pineda et al. 2016
+    coeff1 = np.array([22.4340996509,  13.9177531905,   10.8484431514,
+                       64.0402685036, 39.4069980499, 44.7558405875])
+    coeff2 = np.array([0.0372420573173, 0.027242838377, 0.0283471755313,
+                       0.0705591437518, 0.0890703940209, 0.0203714200634])
 
     # convert Z to array for optimization
     Z = np.array(Z).flatten()
@@ -245,14 +255,15 @@ def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
     vel       = np.array(calc_uvw(R0, T0, Z0)) - np.array(calc_uvw(slw_c.Rsun, slw_c.Tsun, slw_c.Zsun))   # convert to cartesian velocities            
                                                                                         # returns [U,V,W]
 
+    # Convert velocities and dispersions to UVW velocities. Halo values taken from minimum value of Bond et al. 2010.
     if len(R0) == 1:
-        U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], np.zeros(len(frac[0]))+140, frac[0], frac[1], frac[2])
-        V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], np.zeros(len(frac[0]))+100, frac[0], frac[1], frac[2])
-        W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], np.zeros(len(frac[0]))+80,  frac[0], frac[1], frac[2])
+        U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
+        V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+        W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
     else:
-        U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], np.zeros(len(frac[0]))+140, frac[0], frac[1], frac[2])
-        V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], np.zeros(len(frac[0]))+100, frac[0], frac[1], frac[2])
-        W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], np.zeros(len(frac[0]))+80,  frac[0], frac[1], frac[2])
+        U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
+        V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+        W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
 
     # change UVW to pmra and pmdec
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = ra0,
