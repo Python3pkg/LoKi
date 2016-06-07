@@ -43,6 +43,20 @@ def calc_uvw(R, theta, Z):
 
 ########################
 
+def calc_rtz(R, theta, Z):
+
+    R     = np.array(R).flatten()
+    theta = np.array(theta).flatten()
+    Z     = np.array(Z).flatten()
+
+    Rdot = np.zeros(len(Z))
+    Tdot = (220. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
+    Zdot = np.zeros(len(Z))                             # typical values for the MW in km/s
+
+    return Rdot, Tdot, Zdot
+
+########################
+
 def calc_sigmavel(Z):
 
     # U_thin,V_thin,W_thin,U_thick,V_thick,W_thick
@@ -51,11 +65,6 @@ def calc_sigmavel(Z):
     # see ~/sdss/uw/velocity_ellipsoid.pro[.ps] FOR fitting algorithm[fit]
     coeff  = np.array([7.085, 3.199, 3.702, 10.383, 1.105, 5.403]) # This was for the power-law fit
     power  = np.array([0.276, 0.354, 0.307,  0.285, 0.625, 0.309]) # This was for the power-law fit
-    """
-    # By eye linear fits to Bochanski et al. 2007
-    coeff1 = np.array([23.5, 19.105, 13.9145, 32.9145, 22.105, 29.145])
-    coeff2 = np.array([0.03, 0.0183, 0.02167, 0.04167, 0.0583, 0.0167])
-    """
     """
     # Measured as a linear fuction using Bochanski et al. 2007
     coeff1 = np.array([25.2377322033,  14.7878971614,   13.8771101207,
@@ -264,6 +273,38 @@ def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
         U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
         V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
         W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+
+    # change UVW to pmra and pmdec
+    rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = ra0,
+                                 dec = dec0, distance = dist0 )
+
+    if test == True: return U, V, W
+    else: return pmra, pmdec, rv
+
+########################
+
+def gen_pm_new2(R0, T0, Z0, ra0, dec0, dist0, test=False):
+
+    sigmaa    = calc_sigmavel(Z0)                                                       # calculate the RTZ velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
+    rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
+    vel       = np.array(calc_rtz(R0, T0, Z0)) - np.array(calc_rtz(slw_c.Rsun, slw_c.Tsun, slw_c.Zsun))   # convert to galactocylindrical velocities            
+                                                                                        # returns [R,T,Z]
+
+    # Convert velocities and dispersions to RTZ velocities. Halo values taken from minimum value of Bond et al. 2010.
+    if len(R0) == 1:
+        Rdot = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
+        Tdot = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+        Zdot = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+    else:
+        Rdot = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
+        Tdot = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+        Zdot = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+
+    # change to UVW
+    theta = np.deg2rad(T0)  # convert degrees to radians
+    U = -1 * Tdot * np.sin(theta)
+    V = Tdot * np.cos(theta)
+    W = Zdot
 
     # change UVW to pmra and pmdec
     rv, pmra, pmdec = gal_uvw_pm(U = U, V = V, W = W, ra = ra0,
