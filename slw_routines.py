@@ -31,7 +31,7 @@ def calc_uvw(R, theta, Z):
     Z     = np.array(Z).flatten()
 
     Rdot = np.zeros(len(Z))
-    Tdot = (220. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
+    Tdot = (240. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
     Zdot = np.zeros(len(Z))                             # typical values for the MW in km/s
 
     theta = np.deg2rad(theta)  # convert degrees to radians
