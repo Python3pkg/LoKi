@@ -31,7 +31,7 @@ def calc_uvw(R, theta, Z):
     Z     = np.array(Z).flatten()
 
     Rdot = np.zeros(len(Z))
-    Tdot = (220. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
+    Tdot = (240. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
     Zdot = np.zeros(len(Z))                             # typical values for the MW in km/s
 
     theta = np.deg2rad(theta)  # convert degrees to radians
@@ -50,7 +50,7 @@ def calc_rtz(R, theta, Z):
     Z     = np.array(Z).flatten()
 
     Rdot = np.zeros(len(Z))
-    Tdot = (220. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
+    Tdot = (240. - 0.013*abs(Z) - 1.56e-5*Z**2) #/ R    # will later be converted to Tdot(Z) 
     Zdot = np.zeros(len(Z))                             # typical values for the MW in km/s
 
     return Rdot, Tdot, Zdot
@@ -302,8 +302,9 @@ def gen_pm_new2(R0, T0, Z0, ra0, dec0, dist0, test=False):
 
     # change to UVW
     theta = np.deg2rad(T0)  # convert degrees to radians
-    U = -1 * Tdot * np.sin(theta)
-    V = Tdot * np.cos(theta)
+
+    U = Rdot * np.cos(theta) + Tdot * np.sin(theta)
+    V = -1 * Rdot*np.sin(theta) + Tdot * np.cos(theta)
     W = Zdot
 
     # change UVW to pmra and pmdec
