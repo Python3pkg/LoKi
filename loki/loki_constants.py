@@ -6,6 +6,7 @@ au2pc     = 1 / 206264.806   # conversion from AU to parsecs
 cell_size = 0.5              # size of one cell in degrees
 max_dist  = 1000.            # maximum allowed distance for simulated star
 min_dist  = 0.               # minimum allowed distance for simulated star
+ddist     = 1.               # steps in distance in pc
 
 # Density Profile Parameters
 H_thin    = 300.             # scale heights in pc
