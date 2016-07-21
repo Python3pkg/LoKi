@@ -1,4 +1,4 @@
-M_r,Phi_Mean,Phi_Max,Phi_Min
+M_,Phi_Mean,Phi_Max,Phi_Min
 7.25,1.85,2.51,1.43
 7.75,1.31,1.71,0.93
 8.25,1.36,1.77,1.00
