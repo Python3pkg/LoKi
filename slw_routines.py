@@ -236,7 +236,9 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999, distance=-9999, p
 
         uvw = np.array([ U[i], V[i], W[i] ])
 
-        if lsr == True: uvw = uvw - lsr_vel
+        # Correct for stellar motion
+        if lsr == True:
+            uvw = uvw - lsr_vel
 
         #vec = np.dot( np.transpose(uvw), b)
         vec = np.dot( np.transpose(b), uvw)
@@ -285,7 +287,7 @@ def gen_pm_new(R0, T0, Z0, ra0, dec0, dist0, test=False):
 
 def gen_pm_new2(R0, T0, Z0, ra0, dec0, dist0, test=False):
 
-    sigmaa    = calc_sigmavel(Z0)                                                       # calculate the RTZ velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
+    sigmaa    = calc_sigmavel(Z0)                                                       # calculate the RTZ velocity dispersions                                                                                 # returns [R_thin,T_thin,Z_thin,R_thick,T_thick,Z_thick]
     rho, frac = calc_rho(R0, Z0)                                                        # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
     vel       = np.array(calc_rtz(R0, T0, Z0)) - np.array(calc_rtz(slw_c.Rsun, slw_c.Tsun, slw_c.Zsun))   # convert to galactocylindrical velocities            
                                                                                         # returns [R,T,Z]
@@ -302,9 +304,9 @@ def gen_pm_new2(R0, T0, Z0, ra0, dec0, dist0, test=False):
 
     # change to UVW
     theta = np.deg2rad(T0)  # convert degrees to radians
-
-    U = Rdot * np.cos(theta) + Tdot * np.sin(theta)
-    V = -1 * Rdot*np.sin(theta) + Tdot * np.cos(theta)
+    U = Tdot * np.sin(theta) - Rdot * np.cos(theta)  # Source of contention (positive or negative)
+    #U = Tdot * np.sin(theta) + Rdot * np.cos(theta) 
+    V = Tdot * np.cos(theta) - Rdot * np.sin(theta) 
     W = Zdot
 
     # change UVW to pmra and pmdec
@@ -324,7 +326,7 @@ def inverse_transform_sampling(nstars, dists, n_samples):
     cum_values = np.zeros(bin_edges.shape)
     cum_values[1:] = np.cumsum(hist*np.diff(bin_edges))
     inv_cdf = interpolate.interp1d(cum_values, bin_edges)
-    r = np.random.rand(n_samples)
+    r = np.random.rand(int(n_samples))
     return inv_cdf(r)
     
 ########################
@@ -440,8 +442,8 @@ def gen_nstars_new(ra0, dec0, num, nstars, dists, cellsize = None, range1=False)
         ra1  = np.random.uniform( min(ra0), max(ra0), size=num)
         dec1 = np.random.uniform( min(dec0), max(dec0), size=num)
     else:
-        ra1       = ra0  + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
-        dec1      = dec0 + ((np.random.rand(num, 1).flatten() - 0.5) * cellsize)
+        ra1       = ra0  + ((np.random.rand(int(num), 1).flatten() - 0.5) * cellsize)
+        dec1      = dec0 + ((np.random.rand(int(num), 1).flatten() - 0.5) * cellsize)
     dist1     = inverse_transform_sampling(nstars, dists, num)  # This pulls from a defined distribution
 
     return ra1, dec1, dist1
