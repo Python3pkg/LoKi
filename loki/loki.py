@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-LoKI: A galactic model for simulating low-mass stellar populations.
+LoKi (Low-mass Kinematics): A galactic model for simulating low-mass stellar populations.
 Based off the model used for the SLoWPoKES sample (Dhital et al. 2010)
 """
 
@@ -247,14 +247,14 @@ def angdist(ra_1, dec_1, ra_2, dec_2):
     and returns the angular distance between them in arcseconds.
     '''
 
-    ra1  = np.deg2rad(ra_1)
-    dec1 = np.deg2rad(dec_1) 
-    ra2  = np.deg2rad(ra_2) 
-    dec2 = np.deg2rad(dec_2)
+    ra1  = np.deg2rad( ra_1 )
+    dec1 = np.deg2rad( dec_1 ) 
+    ra2  = np.deg2rad( ra_2 )  
+    dec2 = np.deg2rad( dec_2 )
 
-    dist = np.sqrt( ( (ra1-ra2)**2 * np.cos(dec1) * np.cos(dec2) ) + ( (dec1-dec2) )**2 )
+    dist = np.sqrt( ( ( ra1 - ra2 ) ** 2 * np.cos( dec1 ) * np.cos( dec2 ) ) + ( ( dec1 - dec2 ) ) ** 2 )
 
-    return np.rad2deg(3600. * dist)
+    return np.rad2deg( 3600. * dist )
 
 
 ########################################################################
@@ -316,7 +316,7 @@ def calc_rho(R, Z, rho0 = None):
     rho_halo  = rho0 * ( constants.Rsun / np.sqrt( R ** 2 + ( Z / constants.q ) ** 2) ) ** constants.r_halo
 
     rho       = constants.f_thin * rho_thin + constants.f_thick * rho_thick + constants.f_halo * rho_halo
-    frac      = np.array([constants.f_thin * rho_thin, constants.f_thick * rho_thick, constants.f_halo * rho_halo]) / rho
+    frac      = np.array( [ constants.f_thin * rho_thin, constants.f_thick * rho_thick, constants.f_halo * rho_halo ] ) / rho
 
     return rho, frac
 
@@ -402,6 +402,7 @@ def calc_sigmavel(Z):
     # Measured as a linear fuction using Pineda et al. 2016
     coeff1 = np.array([22.4340996509,  13.9177531905,   10.8484431514,
                        64.0402685036, 39.4069980499, 44.7558405875])
+
     coeff2 = np.array([0.0372420573173, 0.027242838377, 0.0283471755313,
                        0.0705591437518, 0.0890703940209, 0.0203714200634])
 
@@ -410,9 +411,12 @@ def calc_sigmavel(Z):
 
     # calculate sigma_vel from the empirical fit
     if len(Z) > 1:
+    
         #sigmaa = coeff * np.power.outer(abs(Z), power) # This is the old power law way (See Dhital et al. 2010)
         sigmaa = coeff1 + np.outer(abs(Z), coeff2)     # New linear fit from Pineda et al. 2016
+    
     else:
+    
         #sigmaa = coeff * abs(Z)**power    # This is the old power law way (See Dhital et al. 2010)
         sigmaa = coeff1 + coeff2 * abs(Z)  # New linear fit from Pineda et al. 2016
 
@@ -452,25 +456,25 @@ def gen_gaussian_new(mu, sig1, sig2, sig3, f1, f2, f3):
     # Generate values based off the halo (largest dispersion, 
     # more numbers are better, but computationally expensive)
     # We chose 5-sigma so we wouldn't pull some crazy value
-    x = np.array([np.linspace(i-(5*j), i+(5*j), 30000) for i,j in zip(mu, sig3)])
+    x    = np.array([np.linspace(i-(5*j), i+(5*j), 30000) for i,j in zip(mu, sig3)])
     
     # Create the combined probability distribution for the thin and thick disk
-    PDF = f1 * ( 1 / ( np.sqrt( 2 * np.pi ) * sig1 ) * np.exp( -1 * ( ( x.T - mu ) / sig1 ) ** 2 / 2.) ) + \
-          f2 * ( 1 / ( np.sqrt( 2 * np.pi ) * sig2 ) * np.exp( -1 * ( ( x.T - mu ) / sig2 ) ** 2 / 2.) ) + \
-          f3 * ( 1 / ( np.sqrt( 2 * np.pi ) * sig3 ) * np.exp( -1 * ( ( x.T - mu ) / sig3 ) ** 2 / 2.))
+    PDF  = f1 * ( 1 / ( np.sqrt( 2 * np.pi ) * sig1 ) * np.exp( -1 * ( ( x.T - mu ) / sig1 ) ** 2 / 2.) ) + \
+           f2 * ( 1 / ( np.sqrt( 2 * np.pi ) * sig2 ) * np.exp( -1 * ( ( x.T - mu ) / sig2 ) ** 2 / 2.) ) + \
+           f3 * ( 1 / ( np.sqrt( 2 * np.pi ) * sig3 ) * np.exp( -1 * ( ( x.T - mu ) / sig3 ) ** 2 / 2.) )
 
     # Build the cumulative distribution function
-    CDF = np.cumsum(PDF/np.sum(PDF, axis=0), axis=0) 
+    CDF        = np.cumsum(PDF/np.sum(PDF, axis=0), axis=0) 
     
     # Create the inverse cumulative distribution function
     # We interpolate the probability for whatever value is randomly drawn
-    inv_cdf = np.array([ interpolate.interp1d(i, j) for i,j in zip(CDF.T, x)])
+    inv_cdf    = np.array([ interpolate.interp1d(i, j) for i,j in zip(CDF.T, x)])
 
     # Need to get the maximim minimum value for the RNG
     # This will make sure we don't get a number outside the interpolation range
-    minVal = np.max(np.min(CDF.T, axis=1))
-    r = np.random.uniform(low = minVal, high = 1.0, size = len(mu))
-    #r = np.random.rand(len(mu)) # Old way
+    minVal     = np.max(np.min(CDF.T, axis=1))
+    r          = np.random.uniform(low = minVal, high = 1.0, size = len(mu))
+    #r          = np.random.rand(len(mu)) # Old way
 
     velocities = np.array([ inv_cdf[i](j) for i,j in zip(range(0, len(r)), r)])
     
@@ -502,27 +506,30 @@ def gal_uvw_pm(U=-9999, V=-9999, W=-9999, ra=-9999, dec=-9999,
     '''
     
     # Local Standard of Rest velocity components
-    #lsr_vel = np.array([-8.5, 13.38, 6.49])  # Coskunoglu et al. 2011
-    #lsr_vel = np.array([-10, 5.25, 7.17])    # Dehnen & Binney 1998
-    lsr_vel = np.array([-11.1, 12.24, 7.25]) # Schonrich, Dehnen & Binney 2010
+    #lsr_vel = np.array( [-8.5, 13.38, 6.49] )  # Coskunoglu et al. 2011
+    #lsr_vel = np.array( [-10, 5.25, 7.17] )    # Dehnen & Binney 1998
+    lsr_vel = np.array( [-11.1, 12.24, 7.25] ) # Schonrich, Dehnen & Binney 2010
 
     # Check if (numpy) arrays
     if isinstance(ra, np.ndarray) == False:
-        ra = np.array(ra).flatten()
-        dec = np.array(dec).flatten()
-        U = np.array(U).flatten()
-        V = np.array(V).flatten()
-        W = np.array(W).flatten()
+
+        ra       = np.array(ra).flatten()
+        dec      = np.array(dec).flatten()
+        U        = np.array(U).flatten()
+        V        = np.array(V).flatten()
+        W        = np.array(W).flatten()
         distance = np.array(distance).flatten()
-        plx = np.array(plx).flatten()
+        plx      = np.array(plx).flatten()
+
     if ra.size <= 2:
-        ra = np.array([ra]).flatten()
-        dec = np.array([dec]).flatten()
-        U = np.array([U]).flatten()
-        V = np.array([V]).flatten()
-        W = np.array([W]).flatten()
+
+        ra       = np.array([ra]).flatten()
+        dec      = np.array([dec]).flatten()
+        U        = np.array([U]).flatten()
+        V        = np.array([V]).flatten()
+        W        = np.array([W]).flatten()
         distance = np.array([distance]).flatten()
-        plx = np.array([plx]).flatten()
+        plx      = np.array([plx]).flatten()
  
     goodDistance = 0
 
@@ -621,10 +628,13 @@ def gen_pm1(R0, T0, Z0, ra0, dec0, dist0, UVW = False):
     # Convert velocities and dispersions to UVW velocities. 
     # Halo values taken from minimum value of Bond et al. 2010.
     if len(R0) == 1:
+    
         U = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
         V = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
         W = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+    
     else:
+
         U = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
         V = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
         W = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
@@ -635,6 +645,7 @@ def gen_pm1(R0, T0, Z0, ra0, dec0, dist0, UVW = False):
 
     if UVW is True: 
         return pmra, pmdec, rv, U, V, W
+
     else: 
         return pmra, pmdec, rv
 
@@ -659,10 +670,13 @@ def gen_pm2(R0, T0, Z0, ra0, dec0, dist0, UVW = False):
     # Convert velocities and dispersions to RTZ velocities. 
     # Halo values taken from minimum value of Bond et al. 2010.
     if len(R0) == 1:
+
         Rdot = gen_gaussian_new(vel[0], sigmaa[0], sigmaa[3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
         Tdot = gen_gaussian_new(vel[1], sigmaa[1], sigmaa[4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
         Zdot = gen_gaussian_new(vel[2], sigmaa[2], sigmaa[5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
+    
     else:
+
         Rdot = gen_gaussian_new(vel[0], sigmaa[:,0], sigmaa[:,3], np.zeros(len(frac[0]))+135., frac[0], frac[1], frac[2])
         Tdot = gen_gaussian_new(vel[1], sigmaa[:,1], sigmaa[:,4], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
         Zdot = gen_gaussian_new(vel[2], sigmaa[:,2], sigmaa[:,5], np.zeros(len(frac[0]))+85.,  frac[0], frac[1], frac[2])
@@ -697,11 +711,11 @@ def inverse_transform_sampling(nstars, dists, n_samples):
     #data = np.load('Distance_Dist.npy')
     #n_bins = int(np.sqrt(len(data)))
     #hist, bin_edges = np.histogram(data, bins=n_bins, density=True) 
-    hist, bin_edges = nstars/np.trapz(y=nstars, x=dists), np.append(dists, dists[-1]+np.diff(dists)[0])   
-    cum_values = np.zeros(bin_edges.shape)
-    cum_values[1:] = np.cumsum(hist*np.diff(bin_edges))
-    inv_cdf = interpolate.interp1d(cum_values, bin_edges)
-    r = np.random.rand(int(n_samples))
+    hist, bin_edges = nstars / np.trapz( y=nstars, x=dists ), np.append( dists, dists[-1] + np.diff( dists )[0] )   
+    cum_values      = np.zeros(bin_edges.shape)
+    cum_values[1:]  = np.cumsum( hist*np.diff( bin_edges ) )
+    inv_cdf         = interpolate.interp1d( cum_values, bin_edges )
+    r               = np.random.rand( int( n_samples ) )
 
     return inv_cdf(r)
 
@@ -736,12 +750,12 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None, range1 = False, s
         cellsize = constants.cell_size
 
     # Check if (numpy) arrays
-    if isinstance(ra0, np.ndarray)  == False:
-        ra0  = np.array([ra0]).flatten()
-    if isinstance(dec0, np.ndarray) == False:
-        dec0 = np.array([dec0]).flatten()
-    if isinstance(num, np.ndarray)  == False:
-        num  = np.array([num]).flatten()
+    if isinstance( ra0, np.ndarray )  == False:
+        ra0  = np.array( [ra0] ).flatten()
+    if isinstance( dec0, np.ndarray) == False:
+        dec0 = np.array( [dec0] ).flatten()
+    if isinstance( num, np.ndarray )  == False:
+        num  = np.array( [num] ).flatten()
 
     if len(num) != 1:
         raise ValueError('Number of stars (%s) must be a single value'%num)
@@ -765,8 +779,8 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None, range1 = False, s
     # This may not be 100% correct since absolute placement is probably 
     # favored at lower Galactic latitudes
     if range1 is True: # Case for ranges
-        ra1   = np.random.uniform( min(ra0),  max(ra0),  size = nstars_tot)
-        dec1  = np.random.uniform( min(dec0), max(dec0), size = nstars_tot)
+        ra1   = np.random.uniform( min(ra0),  max(ra0),  size = nstars_tot )
+        dec1  = np.random.uniform( min(dec0), max(dec0), size = nstars_tot )
     else: # Case for cell size
         ra1   = ra0  + ( ( np.random.rand( int( nstars_tot ), 1 ).flatten() - 0.5 ) * cellsize )
         dec1  = dec0 + ( ( np.random.rand( int( nstars_tot ), 1 ).flatten() - 0.5 ) * cellsize )
