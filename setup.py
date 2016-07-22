@@ -10,12 +10,13 @@ for dirpath, dirnames, files in os.walk('loki/resources'):
 
 setup(
     name = 'loki',
-    version = 0.5',
-    description = 'Simple model for low-mass galactic kinematics',
+    version = '0.5',
+    description = 'Simple model for galactic kinematics of low-mass stars',
     author = 'Christohper Theissen',
     author_email = 'ctheissen@gmail.com',
     license = 'MIT',
     url = 'https://github.com/ctheissen/LoKi',
+    download_url = 'https://github.com/ctheissen/LoKi/tarball/0.1'
     packages = ['loki'],
     package_data = {
 	'': loki_data,
