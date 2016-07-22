@@ -16,7 +16,7 @@ setup(
     author_email = 'ctheissen@gmail.com',
     license = 'MIT',
     url = 'https://github.com/ctheissen/LoKi',
-    download_url = 'https://github.com/ctheissen/LoKi/tarball/0.1'
+    download_url = 'https://github.com/ctheissen/LoKi/tarball/0.11',
     packages = ['loki'],
     package_data = {
 	'': loki_data,

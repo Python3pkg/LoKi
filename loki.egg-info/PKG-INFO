@@ -1,0 +1,22 @@
+Metadata-Version: 1.1
+Name: loki
+Version: 0.5
+Summary: Simple model for galactic kinematics of low-mass stars
+Home-page: https://github.com/ctheissen/LoKi
+Author: Christohper Theissen
+Author-email: ctheissen@gmail.com
+License: MIT
+Download-URL: https://github.com/ctheissen/LoKi/tarball/0.11
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Astronomy
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
