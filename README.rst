@@ -1,8 +1,5 @@
-# Low-mass Kinematics (LoKi) Galactic Model
-A Galactic model for low-mass stellar counts and kinematics.
-
 ====
-LoKi
+Low-mass Kinematics (LoKi) Galactic Model
 ====
 
 .. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
