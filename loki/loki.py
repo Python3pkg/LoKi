@@ -14,7 +14,11 @@ import numpy as np
 import scipy.interpolate as interpolate
 import matplotlib.pyplot as plt
 from astropy.table import Table
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+import astropy.coordinates as coord
 from .loki_constants import constants
+
 
 
 ########################################################################
@@ -219,17 +223,20 @@ class stars(object):
         self.dec   = dec1
         self.dist  = dist1
 
+        # Convert to Galactic coordinates
         l, b = radec2lb(self.ra, self.dec)
 
         self.l     = l
         self.b     = b
 
+        # Convert to Galactic cylindrical coordinates
         r, t, z = conv_to_galactic(self.ra, self.dec, self.dist)
 
         self.R     = r
         self.T     = t
         self.Z     = z
 
+        # Compute UVW velocities and convert to proper motion and radial velocities
         pmra, pmdec, rv, U, V, W  = gen_pm2(self.R, self.T, self.Z, self.ra, self.dec, self.dist, UVW=True)
 
         self.pmra  = pmra
@@ -238,6 +245,14 @@ class stars(object):
         self.U     = U
         self.V     = V
         self.W     = W
+
+        # Add in Galactic cartesian coordinates
+        #c     = SkyCoord(ra=self.ra*u.degree, dec=self.dec*u.degree, distance=self.dist*u.pc)
+        c      = coord.ICRS(ra=self.ra * u.degree, dec=self.dec * u.degree, distance=self.dist * u.pc)
+
+        self.X = c.transform_to(coord.Galactocentric).cartesian.x.value
+        self.Y = c.transform_to(coord.Galactocentric).cartesian.y.value
+        self.Z = c.transform_to(coord.Galactocentric).cartesian.z.value
     
 
 ########################################################################
