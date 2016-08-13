@@ -810,8 +810,8 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None, range1 = False, s
     # This may not be 100% correct since absolute placement is probably 
     # favored at lower Galactic latitudes
     if range1 is True: # Case for ranges
-        ra1   = np.random.uniform( min(ra0),  max(ra0),  size = nstars_tot )
-        dec1  = np.random.uniform( min(dec0), max(dec0), size = nstars_tot )
+        ra1   = np.random.uniform( np.min(ra0),  np.max(ra0),  size = nstars_tot )
+        dec1  = np.random.uniform( np.min(dec0), np.max(dec0), size = nstars_tot )
     else: # Case for cell size
         ra1   = ra0  + ( ( np.random.rand( int( nstars_tot ), 1 ).flatten() - 0.5 ) * cellsize )
         dec1  = dec0 + ( ( np.random.rand( int( nstars_tot ), 1 ).flatten() - 0.5 ) * cellsize )
@@ -860,4 +860,77 @@ def radec2lb(ra, dec):
 
     return ao, bo
 
+
+########################################################################
+
+def test():
+
+    '''
+    Multiple tests
+    '''
+
+    from mpl_toolkits.mplot3d import Axes3D
+
+    print('Starting Tests')
+
+    print('LINE-OF-SIGHT TEST')
+
+    # Choose some coordinates
+    ra, dec = 10, 40 
+
+    # Create an array of densities that span the entire luminosity function
+    # This creates 10000 random densities by default
+    print ("Building densities")
+    densities = loki.densities()
+    print ("Okay")
+
+    # Pick a random density from the array
+    density = np.random.choice(densities, size = 1)
+
+    # Count the number of stars along the line-of-sight (defaults to an angular volume of 30')
+    # In "full" mode this also returns the distance bins and stellar counts for each bin
+    print ("Counting stars")
+    n, nums, dists = loki.count_nstars(ra, dec, rho0=density, full = True)
+    print ("Okay")
+
+    # Get parameters for all the stars
+    print ("Getting stellar parameters")
+    stars = loki.stars(ra, dec, n, nums, dists)
+    print ("Okay")
+
+    print ("Plotting Proper Motions")
+    plt.figure(1)
+    plt.quiver(stars.ra, stars.dec, stars.pmra, stars.pmdec)
+    plt.xlabel('R.A. (deg)')
+    plt.ylabel('Dec. (deg)')
+    plt.show(block=False)
+    print("Okay")
+
+    print('RANGE TEST')
+
+    ra   = [20, 60]
+    dec  = [20, 40]
+    maxd = 100
+
+    print ("Counting stars")
+    n, nums, dists = loki.count_nstars(ra, dec, maxdist = maxd, rho0=density, full = True)
+    print ("Okay")
+
+    # Get parameters for all the stars
+    print ("Getting stellar parameters")
+    stars = loki.stars(ra, dec, n, nums, dists)
+    print ("Okay")
+
+    print ("Plotting Galactocentric Cartesian Coordinates")
+    fig = plt.figure(2)
+    ax  = fig.add_subplot(111, projection='3d')
+    ax.scatter(stars.X, stars.Y, stars.Z, s=1)
+    ax.set_xlabel('X (pc)')
+    ax.set_ylabel('Y (pc)')
+    ax.set_zlabel('Z (pc)')
+    print ("Okay")
+    plt.show()
+
+
+########################################################################
 
