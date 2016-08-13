@@ -8,7 +8,7 @@ setup(
     author_email = 'ctheissen@gmail.com',
     license = 'MIT',
     url = 'https://github.com/ctheissen/LoKi',
-    download_url = 'https://github.com/ctheissen/LoKi/tarball/0.12',
+    download_url = 'https://github.com/ctheissen/LoKi/tarball/0.5.5',
     packages = ['loki'],
     package_dir = {'loki': 'loki'},
     package_data = {'loki': ['resources/LFs/*.txt']},
