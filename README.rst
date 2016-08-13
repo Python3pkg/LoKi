@@ -12,6 +12,8 @@ Description
 
 This package is for modeling the stellar kinematics of low-mass stars.
 
+Installation instructions and basic usage can be found on the `wiki <https://github.com/ctheissen/LoKi/wiki/>`.
+
 This package is registered with PyPI_.
 
 .. image:: https://img.shields.io/pypi/v/loki.svg
@@ -42,6 +44,12 @@ distributions, hence, each run will be different, even for the same input
 parameters (that’s the Loki aspect).
 
 
+Project Status
+--------------
+
+Currently building `Travis <https://docs.travis-ci.com/>` implementation.
+
+
 License
 -------
 .. image:: https://img.shields.io/pypi/l/loki.svg
@@ -50,12 +58,3 @@ License
 
 LoKi is free software licensed under an MIT-style license. For details see
 the ``LICENSE.txt`` file.
-
-
-Legal
------
-
-.. _Python: http://python.org
-.. _astropy: http://www.astropy.org
-.. _PyPI: https://pypi.python.org/pypi/pydl/
-.. _GitHub: http://github.com
