@@ -3,7 +3,14 @@ from __future__ import (absolute_import, division,
 import numpy as np
 import sys, time
 from astropy.table import Table
-import .loki
+if __name__ == '__main__':
+    if __package__ is None:
+        import sys
+        from os import path
+        sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+        from loki import loki
+    else:
+        from .loki import loki
 
 def prob(sub1 = None, sub2 = None, RAs1 = None, DECs1 = None, RAs2 = None, DECs2 = None,
          dists1 = None, dists2 = None, disterrs1 = None, disterrs2 = None,

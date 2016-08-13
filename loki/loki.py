@@ -12,9 +12,16 @@ from __future__ import (absolute_import, division,
 import time, os, random
 import numpy as np
 import scipy.interpolate as interpolate
-import .loki_constants as constants
 import matplotlib.pyplot as plt
 from astropy.table import Table
+if __name__ == '__main__':
+    if __package__ is None:
+        import sys
+        from os import path
+        sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+        from loki_constants import constants
+    else:
+        from .loki_constants import constants
 
 
 ########################################################################
@@ -98,13 +105,15 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, full = False,
     of sight to be used when randomly assigning distances to stars.
     '''
 
+    const = constants()
+
     # If the density isn't set, get it from the constants file
     if rho0 is None: 
-        rho0 = constants.rho0
+        rho0 = const.rho0
     
     # Get the cell size, or use the default of 30' x 30' 
     if cellsize is None: 
-        cellsize = constants.cell_size
+        cellsize = const.cell_size
 
     # Check if RADEC are arrays, and if so sort them
     if isinstance(ra, np.ndarray) is False:
@@ -129,12 +138,12 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, full = False,
 
     # Grab the distance limits from the file if non given
     if mindist is None:
-        mindist = constants.min_dist
+        mindist = const.min_dist
     if maxdist is None:
-        maxdist = constants.max_dist
+        maxdist = const.max_dist
 
-    dist    = np.arange(mindist, maxdist+constants.ddist, \
-                        constants.ddist, dtype=np.float)      # min_dist < d < max_dist in X pc steps
+    dist    = np.arange(mindist, maxdist+const.ddist, \
+                        const.ddist, dtype=np.float)      # min_dist < d < max_dist in X pc steps
     n       = len(dist)                                       # number of steps to take
     deg2rad = np.pi / 180.                                    # Convert degrees to radians
     
@@ -168,14 +177,14 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, full = False,
         rho[k]            = np.mean( rhoTemp )                 # Take the mean density across the volume
         
         if range1 is True:
-            vol     = 1/3. * ( ( dist[k] + constants.ddist ) ** 3 - dist[k] ** 3 ) * \
+            vol     = 1/3. * ( ( dist[k] + const.ddist ) ** 3 - dist[k] ** 3 ) * \
                       ( np.cos( ( 90. - dec[0] ) * deg2rad ) - np.cos( ( 90. - dec[1] ) * deg2rad ) ) * \
                       ( ra[0] - ra[1] ) * deg2rad
             if vol  < 0: 
                 vol = abs(vol) # This is an absoultely downright dirty fix
 
         else: # The case for a gridsize
-            vol     = 1/3. * ( ( dist[k] + constants.ddist ) ** 3 - dist[k] ** 3) * \
+            vol     = 1/3. * ( ( dist[k] + const.ddist ) ** 3 - dist[k] ** 3) * \
                       ( np.cos( ( 90. - dec - cellsize / 2. ) * deg2rad ) -np.cos( ( 90. - dec + cellsize / 2.) * deg2rad) ) * \
                       ( ( ra + cellsize / 2. ) - ( ra - cellsize / 2. ) ) * deg2rad
             if vol  < 0: 
@@ -185,7 +194,7 @@ def count_nstars(ra, dec, rho0 = None, cellsize = None, full = False,
     nstars_tot = np.sum(nstars)        # Compute the total number of stars within the volume
     
     if full is True: # This says you want the distributions of stars and distances
-        return nstars_tot, nstars, dist + constants.ddist / 2.
+        return nstars_tot, nstars, dist + const.ddist / 2.
     else: 
         return nstars_tot
 
@@ -268,7 +277,8 @@ def conv_to_galactic(ra, dec, d):
     Galactocentric coordinates R, theta, Z.
     '''
 
-    r2d = 180. / np.pi # radians to degrees
+    const = constants()
+    r2d   = 180. / np.pi # radians to degrees
 
     # Check if (numpy) arrays
     if isinstance(ra, np.ndarray)  == False:
@@ -287,9 +297,9 @@ def conv_to_galactic(ra, dec, d):
     l, b = radec2lb(ra, dec)
     l, b = np.deg2rad(l), np.deg2rad(b)
     
-    r    = np.sqrt( (d * np.cos( b ) )**2 + constants.Rsun * (constants.Rsun - 2 * d * np.cos( b ) * np.cos( l ) ) )
+    r    = np.sqrt( (d * np.cos( b ) )**2 + const.Rsun * (const.Rsun - 2 * d * np.cos( b ) * np.cos( l ) ) )
     t    = np.rad2deg( np.arcsin(d * np.sin( l ) * np.cos( b ) / r) )
-    z    = constants.Zsun + d * np.sin( b - np.arctan( constants.Zsun / constants.Rsun) )
+    z    = const.Zsun + d * np.sin( b - np.arctan( const.Zsun / const.Rsun) )
     
     return r, t, z
 
@@ -304,20 +314,22 @@ def calc_rho(R, Z, rho0 = None):
     Galactocentric coordinates R, theta, Z.
     '''
 
+    const = constants()
+
     R = np.array(R).flatten()
     Z = np.array(Z).flatten()
 
     if rho0 is None: 
-        rho0 = constants.rho0 # Take the value from the constants file if not provided
+        rho0 = const.rho0 # Take the value from the constants file if not provided
 
-    rho_thin  = rho0 * np.exp( -1 * abs( Z - constants.Zsun ) / constants.H_thin )  * \
-                np.exp(-1. * ( R - constants.Rsun) / constants.L_thin)
-    rho_thick = rho0 * np.exp( -1 * abs( Z - constants.Zsun ) / constants.H_thick ) * \
-                np.exp(-1. * ( R - constants.Rsun ) / constants.L_thick )
-    rho_halo  = rho0 * ( constants.Rsun / np.sqrt( R ** 2 + ( Z / constants.q ) ** 2) ) ** constants.r_halo
+    rho_thin  = rho0 * np.exp( -1 * abs( Z - const.Zsun ) / const.H_thin )  * \
+                np.exp(-1. * ( R - const.Rsun) / const.L_thin)
+    rho_thick = rho0 * np.exp( -1 * abs( Z - const.Zsun ) / const.H_thick ) * \
+                np.exp(-1. * ( R - const.Rsun ) / const.L_thick )
+    rho_halo  = rho0 * ( const.Rsun / np.sqrt( R ** 2 + ( Z / const.q ) ** 2) ) ** const.r_halo
 
-    rho       = constants.f_thin * rho_thin + constants.f_thick * rho_thick + constants.f_halo * rho_halo
-    frac      = np.array( [ constants.f_thin * rho_thin, constants.f_thick * rho_thick, constants.f_halo * rho_halo ] ) / rho
+    rho       = const.f_thin * rho_thin + const.f_thick * rho_thick + const.f_halo * rho_halo
+    frac      = np.array( [ const.f_thin * rho_thin, const.f_thick * rho_thick, const.f_halo * rho_halo ] ) / rho
 
     return rho, frac
 
@@ -332,6 +344,8 @@ def calc_uvw(R, theta, Z):
     velocity components in cartesian UVW velocity components
     '''
 
+    const = constants()
+
     # Convert everything to numpy arrays
     R     = np.array(R).flatten()
     theta = np.array(theta).flatten()
@@ -339,7 +353,7 @@ def calc_uvw(R, theta, Z):
 
     # Make arrays with the velocity components
     Rdot = np.zeros(len(Z))
-    Tdot = (constants.Rvel - 0.013*abs(Z) - 1.56e-5*Z**2) # will later be converted to Tdot(Z) 
+    Tdot = (const.Rvel - 0.013*abs(Z) - 1.56e-5*Z**2) # will later be converted to Tdot(Z) 
     Zdot = np.zeros(len(Z))                               # typical values for the MW in km/s
 
     theta = np.deg2rad(theta)  # convert degrees to radians
@@ -360,6 +374,8 @@ def calc_rtz(R, theta, Z):
     velocity components in Galactocylindrical velocity components
     '''
 
+    const = constants()
+
     # Convert everything to numpy arrays
     R     = np.array( R ).flatten()
     theta = np.array( theta ).flatten()
@@ -367,7 +383,7 @@ def calc_rtz(R, theta, Z):
 
     # Make arrays with the velocity components
     Rdot = np.zeros( len( Z ) )
-    Tdot = ( constants.Rvel - 0.013 * abs( Z ) - 1.56e-5 * Z ** 2) 
+    Tdot = ( const.Rvel - 0.013 * abs( Z ) - 1.56e-5 * Z ** 2) 
     Zdot = np.zeros( len( Z ) )                                    
 
     return Rdot, Tdot, Zdot
@@ -620,10 +636,12 @@ def gen_pm1(R0, T0, Z0, ra0, dec0, dist0, UVW = False):
     component distribution.
     '''
 
+    const = constants()
+
     sigmaa    = calc_sigmavel(Z0)                                                    # calculate the UVW velocity dispersions                                                                                 # returns [U_thin,V_thin,W_thin,U_thick,V_thick,W_thick]
     rho, frac = calc_rho(R0, Z0)                                                     # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
     vel       = np.array(calc_uvw(R0, T0, Z0)) - \
-                np.array(calc_uvw(constants.Rsun, constants.Tsun, constants.Zsun))   # convert to cartesian velocities            
+                np.array(calc_uvw(const.Rsun, const.Tsun, const.Zsun))   # convert to cartesian velocities            
                                                                                      # returns [U,V,W]
 
     # Convert velocities and dispersions to UVW velocities. 
@@ -662,10 +680,12 @@ def gen_pm2(R0, T0, Z0, ra0, dec0, dist0, UVW = False):
     component distribution.
     '''
 
+    const = constants()
+
     sigmaa    = calc_sigmavel(Z0)                                                    # calculate the RTZ velocity dispersions                                                                                 # returns [R_thin,T_thin,Z_thin,R_thick,T_thick,Z_thick]
     rho, frac = calc_rho(R0, Z0)                                                     # calc the frac of thin/thick disk stars                                                                            # returns frac = [f_thin, f_thick, f_halo]
     vel       = np.array(calc_rtz(R0, T0, Z0)) - \
-                np.array(calc_rtz(constants.Rsun, constants.Tsun, constants.Zsun))   # convert to galactocylindrical velocities            
+                np.array(calc_rtz(const.Rsun, const.Tsun, const.Zsun))   # convert to galactocylindrical velocities            
                                                                                      # returns [R,T,Z]
 
     # Convert velocities and dispersions to RTZ velocities. 
@@ -745,10 +765,12 @@ def gen_nstars(ra0, dec0, num, nstars, dists, cellsize = None, range1 = False, s
     nstars  - number of stars per distance bin along the LOS
     dists   - array of distances pertaining to nstars 
     '''
+
+    const = constants()
     
     # Get the cell size, or use the default of 30' x 30' 
     if cellsize is None: 
-        cellsize = constants.cell_size
+        cellsize = const.cell_size
 
     # Check if (numpy) arrays
     if isinstance( ra0, np.ndarray )  == False:
