@@ -14,14 +14,7 @@ import numpy as np
 import scipy.interpolate as interpolate
 import matplotlib.pyplot as plt
 from astropy.table import Table
-if __name__ == '__main__':
-    if __package__ is None:
-        import sys
-        from os import path
-        sys.path.append( path.dirname( path.dirname( path.abspath('__file__') ) ) )
-        from loki_constants import constants
-    else:
-        from .loki_constants import constants
+from .loki_constants import constants
 
 
 ########################################################################

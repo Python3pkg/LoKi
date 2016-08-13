@@ -1,4 +1,4 @@
-class constants():
+class constants(object):
 
 	def __init__(self):
 
