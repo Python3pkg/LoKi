@@ -12,7 +12,7 @@ Description
 
 This package is for modeling the stellar kinematics of low-mass stars.
 
-Installation instructions and basic usage can be found on the `wiki <https://github.com/ctheissen/LoKi/wiki/>`.
+Installation instructions and basic usage can be found on the `wiki <https://github.com/ctheissen/LoKi/wiki/>`_.
 
 This package is registered with PyPI_.
 
@@ -47,7 +47,7 @@ parameters (that’s the Loki aspect).
 Project Status
 --------------
 
-Currently building `Travis <https://docs.travis-ci.com/>` implementation.
+Currently building `Travis <https://docs.travis-ci.com/>`_ implementation.
 
 
 License
