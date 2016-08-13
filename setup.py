@@ -2,13 +2,13 @@ from distutils.core import setup
 
 setup(
     name = 'loki',
-    version = '0.5.5',
+    version = '0.5.6',
     description = 'Simple model for galactic kinematics of low-mass stars',
     author = 'Christohper Theissen',
     author_email = 'ctheissen@gmail.com',
     license = 'MIT',
     url = 'https://github.com/ctheissen/LoKi',
-    download_url = 'https://github.com/ctheissen/LoKi/tarball/0.5.5',
+    download_url = 'https://github.com/ctheissen/LoKi/tarball/0.5.6',
     packages = ['loki'],
     package_dir = {'loki': 'loki'},
     package_data = {'loki': ['resources/LFs/*.txt']},
