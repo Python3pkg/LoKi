@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name = 'loki',
-    version = '0.5.3',
+    version = '0.5.4',
     description = 'Simple model for galactic kinematics of low-mass stars',
     author = 'Christohper Theissen',
     author_email = 'ctheissen@gmail.com',
