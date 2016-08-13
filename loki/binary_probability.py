@@ -3,8 +3,7 @@ from __future__ import (absolute_import, division,
 import numpy as np
 import sys, time
 from astropy.table import Table
-import loki
-import loki_constants 
+import .loki
 
 def prob(sub1 = None, sub2 = None, RAs1 = None, DECs1 = None, RAs2 = None, DECs2 = None,
          dists1 = None, dists2 = None, disterrs1 = None, disterrs2 = None,

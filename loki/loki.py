@@ -12,7 +12,7 @@ from __future__ import (absolute_import, division,
 import time, os, random
 import numpy as np
 import scipy.interpolate as interpolate
-import loki_constants as constants
+import .loki_constants as constants
 import matplotlib.pyplot as plt
 from astropy.table import Table
 
