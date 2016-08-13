@@ -7,7 +7,8 @@ Based off the model used for the SLoWPoKES sample (Dhital et al. 2010)
 """
 
 # Import needed packages and functions
-from __future__ import print_function, division
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
 import time, os, random
 import numpy as np
 import scipy.interpolate as interpolate
