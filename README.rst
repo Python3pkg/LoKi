@@ -19,7 +19,7 @@ This package is registered with PyPI_.
 
     Please cite as
 
-    Chris Theissen, & Andrew West. (2016). LoKi: The Low-mass Kinematics Galactic Model: Initial Release [Software]. Zenodo. http://doi.org/10.5281/zenodo.159725
+    Chris Theissen, Andrew West, & Saurav Dhital. (2016). LoKi: The Low-mass Kinematics Galactic Model: Initial Release [Software]. Zenodo. http://doi.org/10.5281/zenodo.159725
 
 .. image:: https://img.shields.io/pypi/v/loki.svg
     :target: https://pypi.python.org/pypi/loki
