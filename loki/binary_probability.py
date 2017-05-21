@@ -28,7 +28,7 @@ def prob(sub1 = None, sub2 = None, RAs1 = None, DECs1 = None, RAs2 = None, DECs2
     """
 
     # Start the program and time it
-    print('Start Time: ', time.strftime("%I:%M:%S"))
+    print(('Start Time: ', time.strftime("%I:%M:%S")))
     t_start = time.time()
 
     # Check if there is kinematic and positional information
@@ -127,8 +127,8 @@ def prob(sub1 = None, sub2 = None, RAs1 = None, DECs1 = None, RAs2 = None, DECs2
     # **************************************************************************
 
     print('')
-    print('No. of candidate pairs: %s'%n)
-    print('No. of MC steps       : %s'%nstepsMC)
+    print(('No. of candidate pairs: %s'%n))
+    print(('No. of MC steps       : %s'%nstepsMC))
     print('')
 
     # storage arrays
@@ -136,7 +136,7 @@ def prob(sub1 = None, sub2 = None, RAs1 = None, DECs1 = None, RAs2 = None, DECs2
     count_star   = np.zeros( (n, 5), dtype=np.float64)    # stores no. of companions for each LOS
     count_binary = np.zeros( (n, 5), dtype=np.float64)    # stores no. of companions for each LOS
 
-    print('We are at (%s):'%('%'))
+    print(('We are at (%s):'%('%')))
 
     count = 0
 
@@ -317,9 +317,9 @@ def prob(sub1 = None, sub2 = None, RAs1 = None, DECs1 = None, RAs2 = None, DECs2
     # Write the table locally (overwrite is on by default, scary)
     Table1.write(outfile)
 
-    print('TOTAL TIME TAKEN   : ', (time.time() - t_start) / 3600.,' hours')
-    print('TIME TAKEN PER LOS : ', (time.time() - t_start) / (60*n),' minutes')
-    print('END TIME           : ', time.strftime("%I:%M:%S"))
+    print(('TOTAL TIME TAKEN   : ', (time.time() - t_start) / 3600.,' hours'))
+    print(('TIME TAKEN PER LOS : ', (time.time() - t_start) / (60*n),' minutes'))
+    print(('END TIME           : ', time.strftime("%I:%M:%S")))
 
 
 

@@ -501,7 +501,7 @@ def gen_gaussian_new(mu, sig1, sig2, sig3, f1, f2, f3):
     r          = np.random.uniform(low = minVal, high = 1.0, size = len(mu))
     #r          = np.random.rand(len(mu)) # Old way
 
-    velocities = np.array([ inv_cdf[i](j) for i,j in zip(range(0, len(r)), r)])
+    velocities = np.array([ inv_cdf[i](j) for i,j in zip(list(range(0, len(r))), r)])
     
     # return the UVW value
     return velocities
